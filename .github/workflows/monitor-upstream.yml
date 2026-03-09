@@ -1,0 +1,226 @@
+name: Monitor Upstream Changes
+
+# Runs weekly on Monday at 9:00 UTC, or manually via workflow_dispatch
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: write
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          # Need full history to push commits back
+          fetch-depth: 0
+
+      - name: Read tracking file
+        id: tracking
+        run: |
+          # Parse the tracking file for repo, folder, and last checked SHA
+          UPSTREAM_REPO=$(jq -r '.repo' .upstream-tracking.json)
+          MONITORED_FOLDER=$(jq -r '.folder' .upstream-tracking.json)
+          LAST_SHA=$(jq -r '.last_checked_sha' .upstream-tracking.json)
+
+          echo "upstream_repo=$UPSTREAM_REPO" >> "$GITHUB_OUTPUT"
+          echo "monitored_folder=$MONITORED_FOLDER" >> "$GITHUB_OUTPUT"
+          echo "last_sha=$LAST_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest upstream commit SHA
+        id: upstream
+        run: |
+          UPSTREAM_REPO="${{ steps.tracking.outputs.upstream_repo }}"
+
+          # Fetch the latest commit SHA from the upstream repo's default branch
+          LATEST_SHA=$(git ls-remote "https://github.com/${UPSTREAM_REPO}.git" HEAD | awk '{print $1}')
+
+          if [ -z "$LATEST_SHA" ]; then
+            echo "::error::Failed to fetch latest SHA from upstream repo. Network issue or repo not accessible."
+            exit 1
+          fi
+
+          echo "latest_sha=$LATEST_SHA" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream SHA: $LATEST_SHA"
+
+      - name: Check if upstream has changed
+        id: changed
+        run: |
+          LAST_SHA="${{ steps.tracking.outputs.last_sha }}"
+          LATEST_SHA="${{ steps.upstream.outputs.latest_sha }}"
+
+          if [ "$LAST_SHA" = "$LATEST_SHA" ]; then
+            echo "No new commits in upstream repo. Nothing to do."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream has new commits ($LAST_SHA -> $LATEST_SHA). Checking folder..."
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sparse checkout upstream repo and compare
+        if: steps.changed.outputs.has_changes == 'true'
+        id: diff
+        run: |
+          UPSTREAM_REPO="${{ steps.tracking.outputs.upstream_repo }}"
+          MONITORED_FOLDER="${{ steps.tracking.outputs.monitored_folder }}"
+          LAST_SHA="${{ steps.tracking.outputs.last_sha }}"
+          LATEST_SHA="${{ steps.upstream.outputs.latest_sha }}"
+
+          # Clone upstream with sparse checkout (only the monitored folder)
+          mkdir -p /tmp/upstream
+          cd /tmp/upstream
+          git init
+          git remote add origin "https://github.com/${UPSTREAM_REPO}.git"
+          git sparse-checkout init --cone
+          git sparse-checkout set "$MONITORED_FOLDER"
+
+          # Fetch only the commits we need
+          git fetch origin "$LATEST_SHA" --depth=1
+          git fetch origin "$LAST_SHA" --depth=1 || {
+            echo "::warning::Could not fetch old SHA (may have been force-pushed). Fetching full history."
+            git fetch origin --unshallow 2>/dev/null || git fetch origin
+          }
+
+          # Check if the monitored folder actually changed between the two SHAs
+          DIFF_OUTPUT=$(git diff "$LAST_SHA" "$LATEST_SHA" -- "$MONITORED_FOLDER" 2>/dev/null || echo "")
+
+          if [ -z "$DIFF_OUTPUT" ]; then
+            echo "No changes detected in monitored folder."
+            echo "folder_changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "folder_changed=true" >> "$GITHUB_OUTPUT"
+
+          # Get list of changed files (relative to monitored folder)
+          FILE_SUMMARY=$(git diff --stat "$LAST_SHA" "$LATEST_SHA" -- "$MONITORED_FOLDER")
+          echo "file_summary<<EOFSUM" >> "$GITHUB_OUTPUT"
+          echo "$FILE_SUMMARY" >> "$GITHUB_OUTPUT"
+          echo "EOFSUM" >> "$GITHUB_OUTPUT"
+
+          # Save the full diff to a file (truncate if very large)
+          DIFF_LINES=$(echo "$DIFF_OUTPUT" | wc -l)
+          if [ "$DIFF_LINES" -gt 500 ]; then
+            echo "$DIFF_OUTPUT" | head -500 > /tmp/diff_output.txt
+            echo "" >> /tmp/diff_output.txt
+            echo "... (diff truncated, $DIFF_LINES total lines. See commits for full changes.)" >> /tmp/diff_output.txt
+          else
+            echo "$DIFF_OUTPUT" > /tmp/diff_output.txt
+          fi
+
+          # Get commit log between the two SHAs for the monitored folder
+          COMMIT_LOG=$(git log --oneline "$LAST_SHA".."$LATEST_SHA" -- "$MONITORED_FOLDER" 2>/dev/null || echo "Could not retrieve commit log.")
+          echo "commit_log<<EOFLOG" >> "$GITHUB_OUTPUT"
+          echo "$COMMIT_LOG" >> "$GITHUB_OUTPUT"
+          echo "EOFLOG" >> "$GITHUB_OUTPUT"
+
+      - name: Check for existing open issue
+        if: steps.diff.outputs.folder_changed == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Search for open issues with our label to avoid duplicates
+          OPEN_ISSUES=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "upstream-change" \
+            --state open \
+            --limit 1 \
+            --json number \
+            --jq 'length')
+
+          if [ "$OPEN_ISSUES" -gt 0 ]; then
+            echo "An open upstream-change issue already exists. Skipping issue creation."
+            echo "duplicate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "duplicate=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create issue for upstream changes
+        if: steps.diff.outputs.folder_changed == 'true' && steps.existing.outputs.duplicate == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UPSTREAM_REPO="${{ steps.tracking.outputs.upstream_repo }}"
+          MONITORED_FOLDER="${{ steps.tracking.outputs.monitored_folder }}"
+          LAST_SHA="${{ steps.tracking.outputs.last_sha }}"
+          LATEST_SHA="${{ steps.upstream.outputs.latest_sha }}"
+          FILE_SUMMARY="${{ steps.diff.outputs.file_summary }}"
+          COMMIT_LOG="${{ steps.diff.outputs.commit_log }}"
+          DIFF_CONTENT=$(cat /tmp/diff_output.txt)
+
+          # Ensure the "upstream-change" label exists
+          gh label create "upstream-change" \
+            --repo "${{ github.repository }}" \
+            --description "Upstream repository changes detected" \
+            --color "D93F0B" 2>/dev/null || true
+
+          COMPARE_URL="https://github.com/${UPSTREAM_REPO}/compare/${LAST_SHA}...${LATEST_SHA}"
+          FOLDER_URL="https://github.com/${UPSTREAM_REPO}/tree/${LATEST_SHA}/${MONITORED_FOLDER}"
+
+          # Build the issue body
+          BODY=$(cat <<EOF
+          ## Upstream Changes Detected
+
+          Changes were detected in [\`${MONITORED_FOLDER}\`](${FOLDER_URL}) of [${UPSTREAM_REPO}](https://github.com/${UPSTREAM_REPO}).
+
+          **Previous SHA:** \`${LAST_SHA}\`
+          **Current SHA:** \`${LATEST_SHA}\`
+          **Compare:** [View full comparison](${COMPARE_URL})
+
+          ### Changed Files
+
+          \`\`\`
+          ${FILE_SUMMARY}
+          \`\`\`
+
+          ### Relevant Commits
+
+          \`\`\`
+          ${COMMIT_LOG}
+          \`\`\`
+
+          ### Diff
+
+          <details>
+          <summary>Click to expand diff</summary>
+
+          \`\`\`diff
+          ${DIFF_CONTENT}
+          \`\`\`
+
+          </details>
+
+          ---
+          *This issue was automatically created by the [monitor-upstream](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) workflow. Close this issue once changes have been reviewed.*
+          EOF
+          )
+
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Upstream change detected in ${MONITORED_FOLDER}" \
+            --body "$BODY" \
+            --label "upstream-change"
+
+      - name: Update tracking file
+        if: steps.diff.outputs.folder_changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_SHA="${{ steps.upstream.outputs.latest_sha }}"
+
+          # Update the tracking file with the new SHA
+          jq --arg sha "$LATEST_SHA" '.last_checked_sha = $sha' .upstream-tracking.json > tmp.json
+          mv tmp.json .upstream-tracking.json
+
+          # Commit and push the updated tracking file
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .upstream-tracking.json
+          git commit -m "chore: update upstream tracking SHA to ${LATEST_SHA:0:12}"
+          git push
