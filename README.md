@@ -1,3 +1,7 @@
+> [!WARNING]
+> This is ARCHIVED. See the [`pipecat-examples` repo](https://github.com/pipecat-ai/pipecat-examples/tree/main/word-wrangler-gemini-live) for the latest Gemini Live demos.
+
+
 # Word Wrangler
 
 Word Wrangler is a voice-based word guessing game powered by [Pipecat](https://github.com/pipecat-ai/pipecat) and the [Gemini Live API](https://ai.google.dev/gemini-api/docs/live). The game is available in two versions: a web-based experience and a phone-based experience. Test your description skills in this AI-powered twist on classic word games!
