@@ -1,0 +1,166 @@
+name: Watch Upstream word-wrangler-gemini-live
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # 每周一 UTC 09:00 自动检查
+  workflow_dispatch:       # 支持手动触发
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+
+      # ── 读取上次记录的 commit hash ──────────────────────────────────────
+      - name: Load last known commit hash
+        id: last
+        run: |
+          FILE=".github/upstream-last-commit.txt"
+          if [ -f "$FILE" ]; then
+            echo "hash=$(cat $FILE)" >> "$GITHUB_OUTPUT"
+          else
+            echo "hash=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 获取上游目标路径最新的 commit hash ─────────────────────────────
+      - name: Fetch latest upstream commit for the example path
+        id: upstream
+        run: |
+          LATEST=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pipecat-ai/pipecat-examples/commits?path=word-wrangler-gemini-live&per_page=1" \
+            | jq -r '.[0].sha')
+
+          echo "hash=$LATEST" >> "$GITHUB_OUTPUT"
+
+          COMMIT_MSG=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pipecat-ai/pipecat-examples/commits/$LATEST" \
+            | jq -r '.commit.message')
+
+          COMMIT_DATE=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pipecat-ai/pipecat-examples/commits/$LATEST" \
+            | jq -r '.commit.author.date')
+
+          COMMIT_AUTHOR=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pipecat-ai/pipecat-examples/commits/$LATEST" \
+            | jq -r '.commit.author.name')
+
+          # 换行符转义，以便写入 GITHUB_OUTPUT
+          COMMIT_MSG_ESCAPED="${COMMIT_MSG//$'\n'/%0A}"
+          echo "message=$COMMIT_MSG_ESCAPED" >> "$GITHUB_OUTPUT"
+          echo "date=$COMMIT_DATE"           >> "$GITHUB_OUTPUT"
+          echo "author=$COMMIT_AUTHOR"       >> "$GITHUB_OUTPUT"
+
+      # ── 对比，判断是否有变更 ────────────────────────────────────────────
+      - name: Compare hashes
+        id: diff
+        run: |
+          LAST="${{ steps.last.outputs.hash }}"
+          LATEST="${{ steps.upstream.outputs.hash }}"
+
+          if [ "$LAST" = "$LATEST" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes detected. Last: $LAST"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Change detected! $LAST → $LATEST"
+          fi
+
+      # ── 获取文件级别的 diff（有变更时）─────────────────────────────────
+      - name: Fetch changed files
+        id: files
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          LAST="${{ steps.last.outputs.hash }}"
+          LATEST="${{ steps.upstream.outputs.hash }}"
+
+          if [ -z "$LAST" ]; then
+            # 第一次运行，没有历史 hash，只列出当前文件
+            FILES="*(首次运行，无历史对比)*"
+          else
+            FILES=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/pipecat-ai/pipecat-examples/compare/$LAST...$LATEST" \
+              | jq -r '.files[] | select(.filename | startswith("word-wrangler-gemini-live")) | "- `" + .filename + "` (" + .status + ", +" + (.additions|tostring) + "/-" + (.deletions|tostring) + ")"' \
+              | head -50)
+
+            if [ -z "$FILES" ]; then
+              FILES="*(此次 commit 未涉及 word-wrangler-gemini-live 目录下的文件变更)*"
+            fi
+          fi
+
+          FILES_ESCAPED="${FILES//$'\n'/%0A}"
+          echo "list=$FILES_ESCAPED" >> "$GITHUB_OUTPUT"
+
+      # ── 创建 GitHub Issue ───────────────────────────────────────────────
+      - name: Create GitHub Issue
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const last   = `${{ steps.last.outputs.hash }}`;
+            const latest = `${{ steps.upstream.outputs.hash }}`;
+            const msg    = `${{ steps.upstream.outputs.message }}`.replace(/%0A/g, '\n');
+            const date   = `${{ steps.upstream.outputs.date }}`;
+            const author = `${{ steps.upstream.outputs.author }}`;
+            const files  = `${{ steps.files.outputs.list }}`.replace(/%0A/g, '\n');
+
+            const compareUrl = last
+              ? `https://github.com/pipecat-ai/pipecat-examples/compare/${last}...${latest}`
+              : `https://github.com/pipecat-ai/pipecat-examples/commit/${latest}`;
+
+            const dirUrl = `https://github.com/pipecat-ai/pipecat-examples/tree/${latest}/word-wrangler-gemini-live`;
+
+            const body = [
+              `## 📦 上游 \`word-wrangler-gemini-live\` 有新变更`,
+              ``,
+              `| 字段 | 内容 |`,
+              `|------|------|`,
+              `| 最新 Commit | [\`${latest.slice(0,7)}\`](${compareUrl}) |`,
+              `| 上次记录 | ${last ? `\`${last.slice(0,7)}\`` : '*(首次记录)*'} |`,
+              `| 提交者 | ${author} |`,
+              `| 提交时间 | ${date} |`,
+              ``,
+              `### 提交信息`,
+              `\`\`\``,
+              msg,
+              `\`\`\``,
+              ``,
+              `### 变更文件`,
+              files,
+              ``,
+              `### 操作链接`,
+              `- 🔍 [查看 Diff](${compareUrl})`,
+              `- 📁 [浏览最新目录](${dirUrl})`,
+              ``,
+              `---`,
+              `> 请评估是否需要将上游变更同步到本 repo。确认处理后可关闭此 Issue。`,
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              title: `⬆️ 上游更新：word-wrangler-gemini-live (${latest.slice(0,7)})`,
+              body,
+              labels: ['upstream-update'],
+            });
+
+      # ── 保存最新 hash，供下次对比 ───────────────────────────────────────
+      - name: Save latest commit hash
+        if: steps.diff.outputs.changed == 'true' || steps.last.outputs.hash == ''
+        run: |
+          mkdir -p .github
+          echo "${{ steps.upstream.outputs.hash }}" > .github/upstream-last-commit.txt
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/upstream-last-commit.txt
+          git commit -m "chore: update upstream last-known commit hash"
+          git push
