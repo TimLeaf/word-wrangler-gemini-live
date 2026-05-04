@@ -1,11 +1,10 @@
 import { GAME_STATES, GAME_TEXT } from "@/constants/gameConstants";
 import { useConnectionState } from "@/hooks/useConnectionState";
+import { useFirstBotStoppedSpeaking } from "@/hooks/useFirstBotStoppedSpeaking";
 import { useGameState } from "@/hooks/useGameState";
 import { useGameTimer } from "@/hooks/useGameTimer";
 import { useVisualFeedback } from "@/hooks/useVisualFeedback";
 import { useWordDetection } from "@/hooks/useWordDetection";
-import { RTVIEvent } from "@pipecat-ai/client-js";
-import { useRTVIClientEvent } from "@pipecat-ai/client-react";
 import { IconCircleDashedCheck, IconDoorExit } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef } from "react";
 import Logo from "../../assets/logo.png";
@@ -20,7 +19,6 @@ import styles from "./WordWrangler.module.css";
 export const WordWrangler: React.FC<{
   onGameEnded: (score: number, bestScore: number) => void;
 }> = ({ onGameEnded }) => {
-  const botIntroCompletedRef = useRef(false);
   const currentScoreRef = useRef(0);
   const gameState = useGameState();
   const visualFeedback = useVisualFeedback();
@@ -85,8 +83,13 @@ export const WordWrangler: React.FC<{
   // Handle connection state changes
   useEffect(() => {
     if (isConnected) {
-      if (!botIntroCompletedRef.current) {
-        // Connection is active, but bot hasn't completed intro
+      // gameState で判定: ACTIVE / FINISHED でなければ WAITING_FOR_INTRO に入る。
+      // useEffect が gameState 依存で再実行されても、ACTIVE 中に WAITING に
+      // 戻すことを防ぐ（旧 botIntroCompletedRef のガードと等価）。
+      if (
+        gameState.gameState !== GAME_STATES.ACTIVE &&
+        gameState.gameState !== GAME_STATES.FINISHED
+      ) {
         gameState.setGameState(GAME_STATES.WAITING_FOR_INTRO);
       }
     } else {
@@ -98,22 +101,15 @@ export const WordWrangler: React.FC<{
         // Reset to idle state if not already finished
         gameState.setGameState(GAME_STATES.IDLE);
       }
-
-      // Reset intro state when connection is lost
-      botIntroCompletedRef.current = false;
     }
   }, [isConnected, gameState.gameState, endGame]);
 
-  // Listen for the bot to stop speaking to detect intro completion
-  useRTVIClientEvent(RTVIEvent.BotStoppedSpeaking, () => {
-    if (
-      gameState.gameState === GAME_STATES.WAITING_FOR_INTRO &&
-      !botIntroCompletedRef.current
-    ) {
-      // First time the bot stops speaking, consider intro done and start the game
-      botIntroCompletedRef.current = true;
-      startGame();
-    }
+  // ボットの初回挨拶終了を検知してゲームを開始する。
+  // resetKey に isConnected を渡すことで、再接続時には再び 1 回だけ呼ばれる。
+  useFirstBotStoppedSpeaking({
+    enabled: gameState.gameState === GAME_STATES.WAITING_FOR_INTRO,
+    resetKey: isConnected,
+    onFire: startGame,
   });
 
   // Handle correct guess with animation
