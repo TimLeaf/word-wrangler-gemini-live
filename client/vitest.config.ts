@@ -16,7 +16,14 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "node",
+    environment: "happy-dom",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // Node 25+ では `--experimental-webstorage` が有効化されており、Vitest が
+    // パスなしの `--localstorage-file` を Node に渡してしまう影響で、空の `{}`
+    // が happy-dom の `window.localStorage` を shadow し、`setItem` 等が
+    // undefined になる現象が発生する。Node のネイティブ webstorage を無効化し、
+    // happy-dom の Storage 実装を使わせるためのワークアラウンド。
+    // 前提: Node >= 25（package.json の engines で強制）。
+    execArgv: ['--no-experimental-webstorage'],
   },
 });
