@@ -1,10 +1,6 @@
-> [!WARNING]
-> This is ARCHIVED. See the [`pipecat-examples` repo](https://github.com/pipecat-ai/pipecat-examples/tree/main/word-wrangler-gemini-live) for the latest Gemini Live demos.
-
-
 # Word Wrangler
 
-「Word Wrangler」は、PipecatとGemini Live APIを活用した音声ベースの単語当てゲーム(ウェブベースアプリ)
+「Word Wrangler」は、PipecatとGemini Live APIを活用した音声ベースの単語当てゲーム(Web-Base application)
 
 ## Web-Based Game Modes
 
@@ -12,7 +8,7 @@
 
 ## Game Rules
 
-1. このウェブアプリでは、説明する単語が表示される
+1. このWeb Applicationでは、説明する単語が表示される
 2. その単語のどの部分も口に出さずに、その単語を説明してください
 3. AIプレイヤーが、あなたの説明をもとにその単語を当てようとする
 4. アプリが自動的に正解を確認し、スコアを記録する
@@ -85,6 +81,6 @@ enable_krisp = true
 
 ## Tech stack
 
-- [Pipecat](https://www.pipecat.ai/) framework for real-time voice conversation
+- リアルタイム音声会話のための [Pipecat](https://www.pipecat.ai/) framework
 - Google's Gemini Live API
-- Real-time communication (Web via Daily)
+- リアルタイム通信 (Web via Daily)
