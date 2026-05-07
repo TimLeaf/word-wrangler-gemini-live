@@ -115,10 +115,15 @@ Important guidelines:
 
     pipeline = Pipeline(
         [
+            # Receive audio from browser
             transport.input(),
+            # Add user message to context
             user_aggregator,
+            # Language model
             llm,
+            # Send audio back to browser
             transport.output(),
+            # Add bot response to context
             assistant_aggregator,
         ]
     )
