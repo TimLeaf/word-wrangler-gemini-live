@@ -108,14 +108,8 @@
 
 ---
 
-## 既知のドキュメント不整合（Known doc drift）
+<!--
+"Known doc drift" セクションは 2026-05-06 にすべて修正済み。
+詳細は `.steering/2026-05-06/server-claude-md-doc-drift-fix/` 参照。
+-->
 
-将来 CLAUDE.md を更新するときに直すべき箇所:
-
-- `server/CLAUDE.md` の「Pipecat パイプライン」図に `RTVIProcessor` と `STTMuteFilter` が個別 processor として書かれているが、実際の `bot.py:116-124` では:
-  - パイプラインは `transport.input() → user_aggregator → llm → transport.output() → assistant_aggregator` の 5 段
-  - RTVI は `task.rtvi`（PipelineTask の属性）経由で扱われる
-  - ミュート機能は `user_aggregator` 内の `MuteUntilFirstBotCompleteUserMuteStrategy` として実装されている（`STTMuteFilter` という processor は存在しない）
-- `server/CLAUDE.md` に `LocalSmartTurnAnalyzerV3` と `SileroVADAnalyzer(stop_secs=0.2)` の言及があるが、現行 `bot.py` では Smart Turn Analyzer は使われておらず、VAD は `SileroVADAnalyzer()`（デフォルト引数）
-
-この不整合自体は invariant ではないが、UT を書く際の参照情報として混乱の元になるので、quality-foundation の作業の一環として `server/CLAUDE.md` の該当箇所を更新することを推奨。

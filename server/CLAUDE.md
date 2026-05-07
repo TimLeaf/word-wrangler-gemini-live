@@ -30,23 +30,27 @@ Ruff（`pyproject.toml`: line-length 100、`select = ["I"]` で import 順序の
 
 ### Pipecat パイプライン（`bot.py`）
 
+ランタイムで動作するパイプラインは 6 段:
+
 ```
 transport.input()
-  → RTVIProcessor              # クライアント / サーバ間のイベント中継
-  → STTMuteFilter              # ボットの初回挨拶中はユーザー音声をミュート
-  → context_aggregator.user()  # ユーザー発話をコンテキストに集約
-  → GeminiLiveLLMService       # Gemini Live で音声応答を生成
+  → RTVIProcessor         # クライアント / サーバ間の双方向イベント中継（PipelineTask が自動追加）
+  → user_aggregator       # ユーザー発話をコンテキストに集約（ミュート戦略 + VAD を内包）
+  → GeminiLiveLLMService  # Gemini Live で音声応答を生成
   → transport.output()
-  → context_aggregator.assistant()
+  → assistant_aggregator  # アシスタント発話をコンテキストに集約
 ```
+
+`bot.py:116-124` の `Pipeline([...])` には 5 段だけが書かれているが、`PipelineTask` の生成時にランタイムが `RTVIProcessor` を自動追加する。`bot.py` では `@task.rtvi.event_handler("on_client_ready")`（`bot.py:134`）でこの自動追加されたプロセッサにハンドラを登録し、クライアント接続時に `LLMRunFrame` をキューイングして会話を開始する。
 
 重要なポイント：
 
 - **STT は使わない**：`GeminiLiveLLMService` が音声入力を直接処理するため、STT サービスはパイプラインに無い
-- **`STTMuteStrategy.MUTE_UNTIL_FIRST_BOT_COMPLETE`** によって、ボットの自己紹介が完了する前にユーザーが割り込むのを防いでいる。これはクライアント側のゲーム開始トリガー（`BotStoppedSpeaking` の初回発火）と対になっている
+- **ミュート戦略 `MuteUntilFirstBotCompleteUserMuteStrategy`**：`LLMUserAggregatorParams.user_mute_strategies` に渡す形で `user_aggregator` 内部に統合されている（`bot.py:111`）。ボットの自己紹介が完了する前にユーザーが割り込むのを防ぎ、クライアント側のゲーム開始トリガー（`BotStoppedSpeaking` の初回発火）と対になっている
 - **`personality`** はクライアントから `runner_args.body` で渡され、`PERSONALITY_PRESETS`（friendly / professional / enthusiastic / thoughtful / witty）からシステムプロンプトに合成される
-- 本番環境（`ENV != "local"`）では `KrispFilter` が音声入力フィルタとして適用される
-- ターン検出は `LocalSmartTurnAnalyzerV3`、VAD は `SileroVADAnalyzer`（`stop_secs=0.2`）
+- **Krisp ノイズフィルタ**：本番環境（`ENV != "local"`）では `KrispVivaFilter`（Krisp VIVA SDK ベース）が `DailyParams.audio_in_filter` として適用される（`bot.py:162-164`）。利用には `krisp_audio` パッケージが必要
+- **VAD**：`SileroVADAnalyzer()` をデフォルト引数で `LLMUserAggregatorParams.vad_analyzer` に明示指定（`bot.py:112`）
+- **ターン検出**：`bot.py` では明示指定していないため、`UserTurnStrategies` のデフォルト連鎖で `LocalSmartTurnAnalyzerV3` が user turn stop strategy として使われる（pipecat の標準デフォルト）
 
 ### システムプロンプト
 
