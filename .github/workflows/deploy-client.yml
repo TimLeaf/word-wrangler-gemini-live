@@ -54,7 +54,6 @@ jobs:
             --image="${{ steps.tag.outputs.image }}" \
             --region="${GCP_REGION}" \
             --platform=managed \
-            --allow-unauthenticated \
             --port=3000 \
             --set-env-vars="BOT_START_URL=http://example.com"
 
