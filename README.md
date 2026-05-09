@@ -71,12 +71,30 @@ enable_krisp = true
 
 ### Deploy your Client
 
-このプロジェクトは TypeScript、React、Next.js を使用しているため、[Vercel](https://vercel.com/) に最適。
+クライアントは Google Cloud Run（`asia-northeast1`）に GitHub Actions で自動デプロイする構成になっている。`main` ブランチに `client/**` または `.github/workflows/deploy-client.yml` の変更がマージされると `.github/workflows/deploy-client.yml` が起動し、以下を実行する：
 
-- クライアントディレクトリで、VercelのCLIツールをインストールします：`npm install -g vercel`
-- `vercel --version` を実行して、インストールが正常に行われたことを確認します
-- `vercel login` を実行して、Vercelアカウントにログインします
-- `vercel` を実行して、クライアントをVercelにデプロイします
+1. Workload Identity Federation で GCP に認証（JSON キー不要）
+2. `client/Dockerfile`（multi-stage、Next.js standalone 出力）からイメージをビルド
+3. Artifact Registry (`asia-northeast1-docker.pkg.dev/<project>/word-wrangler/word-wrangler-client:<sha>`) に push
+4. Cloud Run サービス `word-wrangler-client` にデプロイ
+
+初回セットアップに必要な GCP 側の準備（API 有効化、Artifact Registry、Service Account、Workload Identity Federation、GitHub Secrets）と運用コマンドは `.steering/2026-05-07/client-deploy-to-gcp/tasks.md` を参照。
+
+サービスは非公開設定で、`roles/run.invoker` を付与した Google アカウントのみがアクセスできる。ブラウザ確認は次のプロキシ経由で行う：
+
+```bash
+gcloud run services proxy word-wrangler-client \
+  --region=asia-northeast1 --project=<project-id>
+# → http://localhost:8080
+```
+
+ローカルでイメージを確認したい場合：
+
+```bash
+cd client
+docker build -t word-wrangler-client .
+docker run --rm -p 3000:3000 -e BOT_START_URL=http://example.com word-wrangler-client
+```
 
 ## Tech stack
 

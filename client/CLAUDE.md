@@ -57,4 +57,14 @@ IDLE → CONNECTING → WAITING_FOR_INTRO → ACTIVE → FINISHED
 
 ## デプロイ
 
-Vercel 推奨（Next.js）。`client/` ディレクトリから `vercel` CLI を実行。
+Google Cloud Run（asia-northeast1）に GitHub Actions で自動デプロイ。`main` への push で `client/**` または `.github/workflows/deploy-client.yml` が変わったときに `.github/workflows/deploy-client.yml` が起動する。
+
+- 認証は Workload Identity Federation（JSON キーは保存しない）。SA は `github-actions-deployer@gen-ai-timleaf.iam.gserviceaccount.com`
+- イメージは `client/Dockerfile`（multi-stage、Next.js standalone 出力）でビルドし、Artifact Registry `asia-northeast1-docker.pkg.dev/gen-ai-timleaf/word-wrangler/word-wrangler-client:<sha>` に push
+- Cloud Run サービス: `word-wrangler-client`。`BOT_START_URL` はワークフローの `--set-env-vars` で注入（現状はダミー値）
+- アクセス制御: 非公開（`roles/run.invoker` は `user:timleaf.lei@gmail.com` のみ）。ワークフローには `--allow-unauthenticated` を付けないこと（付けると毎回 `allUsers` が再付与される）
+- ブラウザ確認は `gcloud run services proxy word-wrangler-client --region=asia-northeast1 --project=gen-ai-timleaf` 経由
+
+GCP 側の構成・運用コマンドは `.steering/2026-05-07/client-deploy-to-gcp/tasks.md` 参照。
+
+`output: 'standalone'` を有効にしているため、`.next/static` と `public/` は Dockerfile の runner ステージで個別にコピーする必要がある（漏らすとアセットが 404）。`NEXT_PUBLIC_*` はビルド時に bundle に焼き込まれるため、変更時は再ビルド必須。
