@@ -158,7 +158,7 @@ Important guidelines:
 
 async def bot(runner_args: RunnerArguments):
     """Main bot entry point compatible with the FastAPI route handler."""
-    if os.environ.get("ENV") != "local":
+    if os.environ.get("KRISP_ENABLED") == "true":
         from pipecat.audio.filters.krisp_viva_filter import KrispVivaFilter
 
         krisp_filter = KrispVivaFilter()
