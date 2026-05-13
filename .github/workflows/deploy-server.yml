@@ -1,0 +1,74 @@
+name: Deploy Server to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+
+env:
+  GCP_REGION: asia-northeast1
+  AR_REPOSITORY: word-wrangler
+  SERVICE_NAME: word-wrangler-server
+  RUNTIME_SA: word-wrangler-server-runtime@gen-ai-timleaf.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Compute image tag
+        id: tag
+        run: |
+          SHA="${GITHUB_SHA::7}"
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${AR_REPOSITORY}/${SERVICE_NAME}:${SHA}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        run: |
+          docker build -t "${{ steps.tag.outputs.image }}" ./server
+          docker push "${{ steps.tag.outputs.image }}"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${SERVICE_NAME}" \
+            --image="${{ steps.tag.outputs.image }}" \
+            --region="${GCP_REGION}" \
+            --platform=managed \
+            --port=8080 \
+            --service-account="${RUNTIME_SA}" \
+            --no-cpu-throttling \
+            --timeout=3600 \
+            --concurrency=10 \
+            --memory=2Gi \
+            --cpu=2 \
+            --min-instances=0 \
+            --max-instances=5 \
+            --update-secrets=GOOGLE_API_KEY=google-api-key:latest,DAILY_API_KEY=daily-api-key:latest \
+            --no-allow-unauthenticated
+
+      - name: Show service URL
+        run: |
+          gcloud run services describe "${SERVICE_NAME}" \
+            --region="${GCP_REGION}" \
+            --format="value(status.url)"
