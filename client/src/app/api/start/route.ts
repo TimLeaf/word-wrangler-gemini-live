@@ -1,19 +1,34 @@
+import { GoogleAuth } from 'google-auth-library';
 import { NextRequest, NextResponse } from 'next/server';
+
+let cachedAuth: GoogleAuth | null = null;
+
+async function fetchIdToken(targetUrl: string): Promise<string> {
+  if (!cachedAuth) {
+    cachedAuth = new GoogleAuth();
+  }
+  const audience = new URL(targetUrl).origin;
+  const client = await cachedAuth.getIdTokenClient(audience);
+  return client.idTokenProvider.fetchIdToken(audience);
+}
 
 export async function POST(request: NextRequest) {
   const { personality } = await request.json();
-  // Use BOT_START_URL from environment or fallback to localhost
   const botStartUrl =
     process.env.BOT_START_URL || 'http://localhost:7860/start';
 
   try {
-    // Prepare headers - make API key optional
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // Only add Authorization header if API key is provided
-    if (process.env.BOT_START_PUBLIC_API_KEY) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      botStartUrl.startsWith('https://')
+    ) {
+      const idToken = await fetchIdToken(botStartUrl);
+      headers.Authorization = `Bearer ${idToken}`;
+    } else if (process.env.BOT_START_PUBLIC_API_KEY) {
       headers.Authorization = `Bearer ${process.env.BOT_START_PUBLIC_API_KEY}`;
     }
 

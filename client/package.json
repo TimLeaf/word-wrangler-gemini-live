@@ -19,6 +19,7 @@
     "@pipecat-ai/daily-transport": "^1.4.1",
     "@tabler/icons-react": "^3.31.0",
     "@tailwindcss/postcss": "^4.1.3",
+    "google-auth-library": "^10.6.2",
     "jotai": "^2.12.5",
     "js-confetti": "^0.12.0",
     "next": "15.2.4",
