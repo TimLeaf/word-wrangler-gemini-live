@@ -138,9 +138,13 @@ Important guidelines:
 
     @task.rtvi.event_handler("on_client_ready")
     async def on_client_ready(rtvi):
-        logger.debug("Client ready event received")
+        logger.info("Client ready event received")
         # Kick off the conversation
         await task.queue_frames([LLMRunFrame()])
+
+    @transport.event_handler("on_app_message")
+    async def on_app_message(transport, message, sender):
+        logger.info(f"[DEBUG] App message from {sender}: {message}")
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
