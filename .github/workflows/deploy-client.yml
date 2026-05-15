@@ -55,7 +55,7 @@ jobs:
             --region="${GCP_REGION}" \
             --platform=managed \
             --port=3000 \
-            --set-env-vars="BOT_START_URL=http://example.com"
+            --set-env-vars="BOT_START_URL=https://api.pipecat.daily.co/v1/public/word-wrangler/start"
 
       - name: Show service URL
         run: |
