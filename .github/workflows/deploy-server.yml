@@ -1,0 +1,43 @@
+name: Deploy Server to Pipecat Cloud
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-server-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: server
+    env:
+      PIPECAT_TOKEN: ${{ secrets.PCC_PAT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: server/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Deploy to Pipecat Cloud
+        run: uv run pcc deploy --yes
