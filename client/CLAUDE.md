@@ -61,7 +61,7 @@ Google Cloud Run（asia-northeast1）に GitHub Actions で自動デプロイ。
 
 - 認証は Workload Identity Federation（JSON キーは保存しない）。SA は `github-actions-deployer@gen-ai-timleaf.iam.gserviceaccount.com`
 - イメージは `client/Dockerfile`（multi-stage、Next.js standalone 出力）でビルドし、Artifact Registry `asia-northeast1-docker.pkg.dev/gen-ai-timleaf/word-wrangler/word-wrangler-client:<sha>` に push
-- Cloud Run サービス: `word-wrangler-client`。`BOT_START_URL` はワークフローの `--set-env-vars` で注入（現状はダミー値）
+- Cloud Run サービス: `word-wrangler-client`。`BOT_START_URL` はワークフローの `--set-env-vars` で注入し、`BOT_START_PUBLIC_API_KEY` は Cloud Secret Manager の secret `bot-start-public-api-key` を `--set-secrets` で参照する（runtime SA に `roles/secretmanager.secretAccessor` 付与済み）
 - アクセス制御: 非公開（`roles/run.invoker` は `user:timleaf.lei@gmail.com` のみ）。ワークフローには `--allow-unauthenticated` を付けないこと（付けると毎回 `allUsers` が再付与される）
 - ブラウザ確認は `gcloud run services proxy word-wrangler-client --region=asia-northeast1 --project=gen-ai-timleaf` 経由
 

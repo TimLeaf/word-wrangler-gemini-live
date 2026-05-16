@@ -70,7 +70,7 @@ agent_profile = "agent-1x"
 - **Krisp Viva は `[krisp_viva] audio_filter = "pro"` で有効化**する。旧 `enable_krisp = true` は deprecated で、Krisp バイナリが mount されないため import エラーになる
 - `min_agents = 0` でコールドスタートを許容しコストを抑えている
 
-デプロイ後、PCC ダッシュボードで agent の **public start endpoint URL** と **public API key** を取得し、クライアント側の Cloud Run 環境変数 `BOT_START_URL` / `BOT_START_PUBLIC_API_KEY` に設定する（`.github/workflows/deploy-client.yml` も参照）。
+デプロイ後、PCC ダッシュボードで agent の **public start endpoint URL** と **public API key** を取得する。`BOT_START_URL` は `.github/workflows/deploy-client.yml` で `--set-env-vars` 経由で注入する固定値、`BOT_START_PUBLIC_API_KEY` は Cloud Secret Manager の secret `bot-start-public-api-key` を `--set-secrets` で参照する（client runtime SA に `roles/secretmanager.secretAccessor` 付与が必要）。鍵をローテーションする場合は Secret Manager に新バージョンを追加すれば次回 deploy 時に反映される。
 
 ### Deploy your Client
 
