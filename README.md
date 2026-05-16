@@ -46,28 +46,31 @@ npm run dev
 
 ### Deploy your Server
 
-Pipecat Cloud を使用してサーバーコードをデプロイできる。詳細な手順については、[Pipecat Cloud クイックスタート](https://docs.pipecat.daily.co/quickstart) をご覧ください
+Pipecat Cloud を使用してサーバーコードをデプロイする。詳細な手順については、[Pipecat Cloud クイックスタート](https://docs.pipecat.daily.co/quickstart) をご覧ください
 
-以下の手順を実行してください：
-
-- Docker イメージをビルド、タグ付けし、レジストリにプッシュします（例：`uv run pcc docker build-push`）
-- CLI またはダッシュボードを使用して、Pipecat Cloud のシークレットを作成する。このエージェントの場合、必要なのは `GOOGLE_API_KEY` のみです。`DAILY_API_KEY` は自動的に適用される
-- エージェントイメージをデプロイする。pcc-deploy.toml ファイルを使用すると、デプロイが簡単になる。例：
+リポジトリには `server/pcc-deploy.toml` を同梱しており、`uv run pcc deploy` を実行するだけでデプロイできる構成にしている：
 
 ```toml
 agent_name = "word-wrangler"
-image = "your-dockerhub-name/word-wrangler:0.1"
 secret_set = "word-wrangler-secrets"
-enable_krisp = true
+agent_profile = "agent-1x"
 
 [scaling]
-  min_agents = 1
-  max_agents = 5
+  min_agents = 0
+  max_agents = 2
+
+[krisp_viva]
+  audio_filter = "pro"
 ```
 
-その後、CLI を使用して `uv run pcc deploy` を実行し、デプロイできる
+ポイント：
 
-- 最後に、エージェントがデプロイされたことを確認してください。ターミナルに結果が表示される
+- **イメージのビルドは PCC 側のリモートビルド**を利用するため、ローカルでの `docker build-push` は不要（カスタムレジストリを使う場合のみ必要）
+- **シークレットは `secret_set`** で参照する。`server/.env` に `GOOGLE_API_KEY` と `DAILY_API_KEY` を用意し、`uv run pcc secrets set word-wrangler-secrets --file .env` で登録する。`DAILY_API_KEY` も明示的に登録が必要（自動付与は `dailyMeetingTokenProperties` 経由のトークン取得で必要なため）
+- **Krisp Viva は `[krisp_viva] audio_filter = "pro"` で有効化**する。旧 `enable_krisp = true` は deprecated で、Krisp バイナリが mount されないため import エラーになる
+- `min_agents = 0` でコールドスタートを許容しコストを抑えている
+
+デプロイ後、PCC ダッシュボードで agent の **public start endpoint URL** と **public API key** を取得し、クライアント側の Cloud Run 環境変数 `BOT_START_URL` / `BOT_START_PUBLIC_API_KEY` に設定する（`.github/workflows/deploy-client.yml` も参照）。
 
 ### Deploy your Client
 
