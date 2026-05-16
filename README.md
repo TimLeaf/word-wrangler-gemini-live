@@ -46,9 +46,11 @@ npm run dev
 
 ### Deploy your Server
 
-Pipecat Cloud を使用してサーバーコードをデプロイする。詳細な手順については、[Pipecat Cloud クイックスタート](https://docs.pipecat.daily.co/quickstart) をご覧ください
+サーバは Pipecat Cloud に GitHub Actions で自動デプロイする構成になっている。`main` ブランチに `server/**` または `.github/workflows/deploy-server.yml` の変更がマージされると `.github/workflows/deploy-server.yml` が起動し、`uv sync --locked` → `uv run pcc deploy --yes` を実行する。
 
-リポジトリには `server/pcc-deploy.toml` を同梱しており、`uv run pcc deploy` を実行するだけでデプロイできる構成にしている：
+認証は PCC の Personal Access Token (`pcc_pat_...`) を GitHub Secrets `PCC_PAT` に登録し、ワークフローで `PIPECAT_TOKEN` env var として渡している。手動再 deploy は `workflow_dispatch`、または手元で `uv run pcc deploy --yes` を実行する。
+
+リポジトリには `server/pcc-deploy.toml` を同梱しており、GHA でも手元でも同じ設定でデプロイできる：
 
 ```toml
 agent_name = "word-wrangler"
@@ -66,7 +68,7 @@ agent_profile = "agent-1x"
 ポイント：
 
 - **イメージのビルドは PCC 側のリモートビルド**を利用するため、ローカルでの `docker build-push` は不要（カスタムレジストリを使う場合のみ必要）
-- **シークレットは `secret_set`** で参照する。`server/.env` に `GOOGLE_API_KEY` と `DAILY_API_KEY` を用意し、`uv run pcc secrets set word-wrangler-secrets --file .env` で登録する。`DAILY_API_KEY` も明示的に登録が必要（自動付与は `dailyMeetingTokenProperties` 経由のトークン取得で必要なため）
+- **シークレットは `secret_set`** で参照する。`server/.env` に `GOOGLE_API_KEY` と `DAILY_API_KEY` を用意し、`uv run pcc secrets set word-wrangler-secrets --file .env` で登録する。`DAILY_API_KEY` も明示的に登録が必要（自動付与は `dailyMeetingTokenProperties` 経由のトークン取得で必要なため）。**secret_set の更新は GHA からは行わず、手動運用とする**（`.env` を CI から上書きするリスクを避けるため）
 - **Krisp Viva は `[krisp_viva] audio_filter = "pro"` で有効化**する。旧 `enable_krisp = true` は deprecated で、Krisp バイナリが mount されないため import エラーになる
 - `min_agents = 0` でコールドスタートを許容しコストを抑えている
 

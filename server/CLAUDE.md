@@ -62,4 +62,10 @@ transport.input()
 
 ## デプロイ
 
-Pipecat Cloud。`pcc-deploy.toml`（git 管理）で `agent_name` / `secret_set` / `agent_profile` / `[scaling]` を指定し、Krisp Viva は `[krisp_viva] audio_filter = "pro"` セクションで有効化する（旧 `enable_krisp = true` は deprecated）。`Dockerfile` は `dailyco/pipecat-base` をベースに `uv sync --locked --no-install-project --no-dev` で依存を入れる構成。`uv run pcc deploy` を実行すると PCC 側でリモートビルドが走るため、ローカルでの `docker build-push` は不要（カスタムレジストリを使う場合のみ必要）。Secret は `uv run pcc secrets set word-wrangler-secrets --file .env` で `secret_set` に登録する。
+Pipecat Cloud に GitHub Actions で自動デプロイ。`main` ブランチに `server/**` または `.github/workflows/deploy-server.yml` の変更がマージされると `.github/workflows/deploy-server.yml` が起動し、`uv sync --locked` → `uv run pcc deploy --yes` を実行する。
+
+- 認証は PCC の Personal Access Token (`pcc_pat_...`)。GitHub Secrets `PCC_PAT` に保存し、ワークフローで `PIPECAT_TOKEN` env var として渡す
+- `pcc-deploy.toml`（git 管理）で `agent_name` / `secret_set` / `agent_profile` / `[scaling]` を指定。Krisp Viva は `[krisp_viva] audio_filter = "pro"` で有効化する（旧 `enable_krisp = true` は deprecated）
+- `Dockerfile` は `dailyco/pipecat-base` をベースに `uv sync --locked --no-install-project --no-dev` で依存を入れる構成。PCC 側でリモートビルドが走るため、ローカルでの `docker build-push` は不要
+- **Secret (`word-wrangler-secrets`) の更新は手動運用**: GHA からは触らない。`server/.env` を更新したら手元で `uv run pcc secrets set word-wrangler-secrets --file .env` を実行する
+- 手動再 deploy は `workflow_dispatch`、または手元で `uv run pcc deploy --yes` を実行

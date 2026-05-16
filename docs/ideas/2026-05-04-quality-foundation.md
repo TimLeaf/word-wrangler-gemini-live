@@ -4,13 +4,14 @@
 最終更新: 2026-05-09
 slug: quality-foundation
 
-## 進捗サマリ（2026-05-09 時点）
+## 進捗サマリ（2026-05-16 時点）
 
 - ✅ **PR CI 整備**（`.github/workflows/ci.yml`）：client は `eslint` + `vitest` + `next build`、server は `ruff` + `pytest`。`dorny/paths-filter` で変更があった側のみ実行
 - ✅ **client UT の足場作り**：Vitest 導入。INV-4 `detectWordGuess`、INV-3 `useGameState` の UT 実装済み（5 ファイル / 25 ケース）
 - ✅ **server UT の足場作り**：pytest 導入。純粋ロジック層の UT を整備
 - ✅ **client 自動デプロイ**：main マージで GitHub Actions → Cloud Run（`asia-northeast1`）。Workload Identity Federation で keyless 認証。サービスは非公開（`roles/run.invoker` を本人のみ）。詳細は `.steering/2026-05-07/client-deploy-to-gcp/`
-- ⏳ **未着手**：server の Cloud Run 移行、`mypy`、パイプライン統合テスト、E2E スモーク、デプロイ後ヘルスチェック、INV-3 の `WordWrangler.tsx` BotStoppedSpeaking dedup テスト
+- ✅ **server 自動デプロイ**：main マージで GitHub Actions → Pipecat Cloud（`.github/workflows/deploy-server.yml`、`uv run pcc deploy --yes`）。認証は PAT (`PIPECAT_TOKEN`)、secret_set は手動運用。詳細は `.steering/2026-05-16/server-auto-deploy-to-pcc/`
+- ⏳ **未着手**：`mypy`、パイプライン統合テスト、E2E スモーク、デプロイ後ヘルスチェック、INV-3 の `WordWrangler.tsx` BotStoppedSpeaking dedup テスト、Branch Protection の必須チェック化
 
 ## プロダクトビジョン
 
@@ -43,8 +44,8 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
   - 既に PR ごとに走るが、GitHub Branch Protection の「必須チェック」化はまだ
 - **自動デプロイ（main マージ時）**
   - client → Cloud Run ✅ 完了（`.github/workflows/deploy-client.yml`、Workload Identity Federation、非公開）
-  - server → ⏳ 未着手。Cloud Run 化を検討中（Pipecat Cloud のままにする選択肢もあり、要決定）
-  - client / server を 1 ワークフローで束ねるか別々にするかは、server の移行先決定後に再検討
+  - server → Pipecat Cloud ✅ 完了（`.github/workflows/deploy-server.yml`、PAT 認証、`uv run pcc deploy --yes`）
+  - client / server は別ワークフローで運用（変更頻度と失敗時影響範囲が異なるため）
 - **デプロイ後ヘルスチェック** ⏳ 未着手
   - bot 起動 → Daily ルーム作成 → 初回挨拶までを smoke check
   - 失敗時は自動ロールバック or 通知
