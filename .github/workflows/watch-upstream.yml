@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout your repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ── 读取上次记录的 commit hash ──────────────────────────────────────
       - name: Load last known commit hash
@@ -103,7 +103,7 @@ jobs:
       # ── 创建 GitHub Issue ───────────────────────────────────────────────
       - name: Create GitHub Issue
         if: steps.diff.outputs.changed == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const last   = `${{ steps.last.outputs.hash }}`;
