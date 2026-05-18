@@ -1,8 +1,9 @@
 # Quality Foundation: テスト & CI/CD 整備
 
 作成日: 2026-05-04
-最終更新: 2026-05-09
+最終更新: 2026-05-18
 slug: quality-foundation
+関連: [`2026-05-18-i18n-japanese.md`](./2026-05-18-i18n-japanese.md), [`2026-05-18-wordbook-service.md`](./2026-05-18-wordbook-service.md)
 
 ## 進捗サマリ（2026-05-16 時点）
 
@@ -12,6 +13,7 @@ slug: quality-foundation
 - ✅ **client 自動デプロイ**：main マージで GitHub Actions → Cloud Run（`asia-northeast1`）。Workload Identity Federation で keyless 認証。サービスは非公開（`roles/run.invoker` を本人のみ）。詳細は `.steering/2026-05-07/client-deploy-to-gcp/`
 - ✅ **server 自動デプロイ**：main マージで GitHub Actions → Pipecat Cloud（`.github/workflows/deploy-server.yml`、`uv run pcc deploy --yes`）。認証は PAT (`PIPECAT_TOKEN`)、secret_set は手動運用。詳細は `.steering/2026-05-16/server-auto-deploy-to-pcc/`
 - ⏳ **未着手**：`mypy`、パイプライン統合テスト、E2E スモーク、デプロイ後ヘルスチェック、INV-3 の `WordWrangler.tsx` BotStoppedSpeaking dedup テスト、Branch Protection の必須チェック化
+- ⏳ **新規追加スコープ（2026-05-18）**：ライブラリ更新を安全に回せる体制（Dependabot/Renovate、定期更新フロー）。下記「ライブラリ更新を支える」節を参照
 
 ## プロダクトビジョン
 
@@ -54,3 +56,36 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 
 - **私（作成者自身）**。Word Wrangler の保守と機能追加を 1 人で進めるオーナー兼エンジニア
 - 想定状況: 新機能を追加するたびに「ゲーム開始トリガーは壊れていないか」「`runner_args.body` のクライアント / サーバ整合は崩れていないか」を毎回手で確認するのが負担になっている。安心して機能追加に集中できる土台が欲しい
+
+## ライブラリ更新を支える（2026-05-18 追加）
+
+新規 idea（多言語対応 / 単語帳サービス）に取り組むほど、依存ライブラリ（`next`, `react`, `pipecat`, `google-genai`, `@pipecat-ai/client-js` など）の更新を取り込み続ける必要性が増す。**テスト基盤の目的に「ライブラリ更新を安全に回せる」を明示的に追加**する。
+
+### 課題
+
+- 現状は更新タイミングが属人的（気付いたときに手動）
+- 更新で「音声が出ない」「ゲーム開始トリガーが壊れる」といったリアルタイム系のリグレッションを踏んでも、PR 段階で検知できない
+- `pipecat` / `google-genai` は破壊的変更が比較的多い
+
+### 取り組み候補
+
+- **Dependabot or Renovate 導入**
+  - 週次で minor/patch を自動 PR
+  - major は手動レビュー前提で別ルール
+  - 対象: client (`package.json`)、server (`uv.lock`)、GitHub Actions (`.github/workflows/`)
+- **更新検証チェックリストの自動化**
+  - 既存 PR CI（lint / UT / build）を最低ラインに
+  - パイプライン統合テストと E2E スモーク（未着手）が揃うと「更新 PR をマージしても壊れていない確証」が得られる
+- **アップストリーム監視との統合**
+  - 既存 `watch-upstream.yml`（pipecat-examples 上流監視）と並列で、依存ライブラリの release 動向も Issue 化する余地
+
+### 新規 idea との関係
+
+- **idea A（多言語）**: 文字列処理・正規表現が増える → UT で守る範囲が広がる
+- **idea B（単語帳サービス）**: モノレポに 3 つ目のサービスが増える → CI の paths-filter / デプロイワークフローの設計を最初から品質基盤と整合させる
+
+### 残タスクとの統合
+
+「未着手」リストに以下を追加：
+- Dependabot or Renovate の導入と運用ルール策定
+- パイプライン統合テスト / E2E スモークを「ライブラリ更新時の検証手段」として位置付ける
