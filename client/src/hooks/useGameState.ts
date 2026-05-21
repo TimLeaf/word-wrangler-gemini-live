@@ -1,8 +1,9 @@
 import { GAME_CONFIG, GAME_STATES, GameState } from "@/constants/gameConstants";
 import { getRandomCatchPhraseWords } from "@/data/wordWranglerWords";
+import { Language } from "@/types/language";
 import { useCallback, useState } from "react";
 
-export function useGameState() {
+export function useGameState({ language = "en" }: { language?: Language } = {}) {
   // Game state
   const [gameState, setGameState] = useState<GameState>(GAME_STATES.IDLE);
   const [timeLeft, setTimeLeft] = useState(GAME_CONFIG.GAME_DURATION);
@@ -14,7 +15,10 @@ export function useGameState() {
 
   // Initialize or reset game state
   const initializeGame = useCallback(() => {
-    const freshWords = getRandomCatchPhraseWords(GAME_CONFIG.WORD_POOL_SIZE);
+    const freshWords = getRandomCatchPhraseWords(
+      GAME_CONFIG.WORD_POOL_SIZE,
+      language
+    );
     setWords(freshWords);
     setGameState(GAME_STATES.ACTIVE);
     setTimeLeft(GAME_CONFIG.GAME_DURATION);
@@ -28,7 +32,7 @@ export function useGameState() {
       _setBestScore(Number(storedScore) || 0);
     }
     return freshWords;
-  }, []);
+  }, [language]);
 
   // End game
   const finishGame = useCallback(() => {
@@ -51,12 +55,14 @@ export function useGameState() {
     setCurrentWordIndex((prev) => {
       if (prev >= words.length - 1) {
         // If we're at the end of the word list, get new words
-        setWords(getRandomCatchPhraseWords(GAME_CONFIG.WORD_POOL_SIZE));
+        setWords(
+          getRandomCatchPhraseWords(GAME_CONFIG.WORD_POOL_SIZE, language)
+        );
         return 0;
       }
       return prev + 1;
     });
-  }, [words]);
+  }, [words, language]);
 
   // Handle skipping
   const useSkip = useCallback(() => {
