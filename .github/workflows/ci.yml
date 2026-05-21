@@ -92,6 +92,10 @@ jobs:
         if: steps.changes.outputs.server == 'true'
         run: uv run ruff check .
 
+      - name: Type check
+        if: steps.changes.outputs.server == 'true'
+        run: uv run ty check
+
       - name: Test
         if: steps.changes.outputs.server == 'true'
         run: uv run pytest

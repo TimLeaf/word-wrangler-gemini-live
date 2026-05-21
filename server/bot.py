@@ -6,6 +6,7 @@
 
 
 import os
+from typing import Any, cast
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -22,7 +23,8 @@ from pipecat.processors.aggregators.llm_response_universal import (
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
-from pipecat.transports.daily.transport import DailyParams, DailyTransport
+from pipecat.transports.base_transport import BaseTransport
+from pipecat.transports.daily.transport import DailyParams
 from pipecat.turns.user_mute import MuteUntilFirstBotCompleteUserMuteStrategy
 
 load_dotenv(override=True)
@@ -67,9 +69,9 @@ PERSONALITY_PRESETS = {
 }
 
 
-async def run_bot(transport: DailyTransport, runner_args: RunnerArguments):
-    # Use the provided session logger if available, otherwise use the default logger
-    config = runner_args.body
+async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
+    # runner_args.body は dict | None。未指定でも既定値で動くよう空 dict にフォールバック。
+    config: dict[str, Any] = runner_args.body or {}
     logger.debug("Configuration: {}", config)
 
     # Extract configuration parameters with defaults
@@ -88,8 +90,11 @@ Important guidelines:
 
     intro_message = """Start with this exact brief introduction: "Welcome to Word Wrangler! I'll try to guess the words you describe. Remember, don't say any part of the word itself. Ready? Let's go!"""
 
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise RuntimeError("GOOGLE_API_KEY is not set")
     llm = GeminiLiveLLMService(
-        api_key=os.getenv("GOOGLE_API_KEY"),
+        api_key=api_key,
         settings=GeminiLiveLLMService.Settings(
             system_instruction=system_instruction,
         ),
@@ -103,8 +108,9 @@ Important guidelines:
         },
     ]
 
-    # This sets up the LLM context by providing messages and tools
-    context = LLMContext(messages)
+    # LLMContext は OpenAI 互換の TypedDict 集合を期待するが、ここでは dict リテラルを
+    # 渡している（pipecat 側が duck-typing で受け付ける運用）。型チェッカ向けに cast。
+    context = LLMContext(cast(Any, messages))
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
@@ -176,7 +182,7 @@ async def bot(runner_args: RunnerArguments):
         )
     }
 
-    transport = await create_transport(runner_args, transport_params)
+    transport = await create_transport(runner_args, cast(Any, transport_params))
 
     await run_bot(transport, runner_args)
 
