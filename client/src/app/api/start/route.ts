@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PERSONALITY_PRESETS, PersonalityType } from '@/types/personality';
+import { LANGUAGE_PRESETS, Language } from '@/types/language';
 
 const VALID_PERSONALITIES = Object.keys(PERSONALITY_PRESETS) as PersonalityType[];
+const VALID_LANGUAGES = Object.keys(LANGUAGE_PRESETS) as Language[];
 
 function isValidPersonality(value: unknown): value is PersonalityType {
   return (
     typeof value === 'string' &&
     (VALID_PERSONALITIES as readonly string[]).includes(value)
+  );
+}
+
+function isValidLanguage(value: unknown): value is Language {
+  return (
+    typeof value === 'string' &&
+    (VALID_LANGUAGES as readonly string[]).includes(value)
   );
 }
 
@@ -28,12 +37,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { personality } = payload as { personality?: unknown };
+  const { personality, language } = payload as {
+    personality?: unknown;
+    language?: unknown;
+  };
 
   if (!isValidPersonality(personality)) {
     return NextResponse.json(
       {
         error: `Invalid personality. Must be one of: ${VALID_PERSONALITIES.join(', ')}`,
+      },
+      { status: 400 }
+    );
+  }
+
+  if (!isValidLanguage(language)) {
+    return NextResponse.json(
+      {
+        error: `Invalid language. Must be one of: ${VALID_LANGUAGES.join(', ')}`,
       },
       { status: 400 }
     );
@@ -59,6 +80,7 @@ export async function POST(request: NextRequest) {
         dailyRoomProperties: { start_video_off: true },
         body: {
           personality,
+          language,
         },
       }),
     });

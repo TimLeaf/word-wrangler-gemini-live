@@ -76,6 +76,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     # Extract configuration parameters with defaults
     personality = config.get("personality", "witty")
+    # `language` はクライアントから受け取るが、本 PR では prompt 切替には未使用。
+    # INV-1 (runner_args.body schema sync) を維持するため受信側で参照する。
+    _language = config.get("language", "en")
 
     personality_prompt = PERSONALITY_PRESETS.get(personality, PERSONALITY_PRESETS["friendly"])
 

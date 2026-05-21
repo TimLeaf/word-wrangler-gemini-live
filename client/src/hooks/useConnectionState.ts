@@ -41,6 +41,7 @@ export function useConnectionState(
           endpoint: `api/start`,
           requestData: {
             personality: config.personality,
+            language: config.language,
           },
         });
       }
