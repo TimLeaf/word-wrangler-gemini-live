@@ -21,10 +21,10 @@ export const WordWrangler: React.FC<{
   onGameEnded: (score: number, bestScore: number) => void;
 }> = ({ onGameEnded }) => {
   const currentScoreRef = useRef(0);
-  const gameState = useGameState();
+  const { language } = useConfigurationSettings();
+  const gameState = useGameState({ language });
   const visualFeedback = useVisualFeedback();
   const { isConnected, client } = useConnectionState();
-  const { language } = useConfigurationSettings();
 
   // Update the ref whenever score changes
   useEffect(() => {
