@@ -41,11 +41,19 @@ export const GAME_TEXT = {
   finalScoreMessage: "Your best score:",
 };
 
-// Pattern for detecting guesses in transcripts
+// Patterns for detecting guesses in transcripts (per language).
+// 各言語の canonical 推測フレーズは server/bot.py の `CANONICAL_GUESS_PHRASES`
+// に対応する。フレーズを変更する場合は両側を揃えること。
+// - en: `Is it [your guess]?` （任意で "word" 引用符 / a/an 冠詞付き）
+// - ja: `答えは「[あなたの推測]」ですか？` （「」省略・句読点バリエーション許容）
+export const GUESS_PATTERNS = {
+  en: /is it [""]?([^""?]+)[""]?(?:\?)?|is it (?:a|an) ([^?]+)(?:\?)?/i,
+  ja: /答えは[「『"]?([^」』"？?。、]+?)[」』"]?\s*(?:ですか[？?。]?|か[？?])/,
+} as const;
+
+// 後方互換: 既存呼び出しを壊さないため英語パターンを残置。新規は GUESS_PATTERNS を直接参照。
 export const TRANSCRIPT_PATTERNS = {
-  // Match both "Is it "word"?" and "Is it a/an word?" patterns
-  GUESS_PATTERN:
-    /is it [""]?([^""?]+)[""]?(?:\?)?|is it (?:a|an) ([^?]+)(?:\?)?/i,
+  GUESS_PATTERN: GUESS_PATTERNS.en,
 };
 
 // Connection states

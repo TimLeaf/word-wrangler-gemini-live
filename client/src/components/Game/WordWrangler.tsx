@@ -1,4 +1,5 @@
 import { GAME_STATES, GAME_TEXT } from "@/constants/gameConstants";
+import { useConfigurationSettings } from "@/contexts/Configuration";
 import { useConnectionState } from "@/hooks/useConnectionState";
 import { useFirstBotStoppedSpeaking } from "@/hooks/useFirstBotStoppedSpeaking";
 import { useGameState } from "@/hooks/useGameState";
@@ -23,6 +24,7 @@ export const WordWrangler: React.FC<{
   const gameState = useGameState();
   const visualFeedback = useVisualFeedback();
   const { isConnected, client } = useConnectionState();
+  const { language } = useConfigurationSettings();
 
   // Update the ref whenever score changes
   useEffect(() => {
@@ -71,6 +73,7 @@ export const WordWrangler: React.FC<{
   const wordDetection = useWordDetection({
     gameState: gameState.gameState,
     currentWord: gameState.currentWord,
+    language,
     onCorrectGuess: handleCorrectGuess,
     onIncorrectGuess: handleIncorrectGuess,
   });

@@ -3,10 +3,12 @@ import { useRTVIClientEvent } from '@pipecat-ai/client-react';
 import { RTVIEvent } from '@pipecat-ai/client-js';
 import { detectWordGuess } from '@/utils/wordDetection';
 import { GAME_STATES, GameState } from '@/constants/gameConstants';
+import { Language } from '@/types/language';
 
 interface UseWordDetectionProps {
   gameState: GameState;
   currentWord: string;
+  language: Language;
   onCorrectGuess: () => void;
   onIncorrectGuess: () => void;
 }
@@ -14,6 +16,7 @@ interface UseWordDetectionProps {
 export function useWordDetection({
   gameState,
   currentWord,
+  language,
   onCorrectGuess,
   onIncorrectGuess,
 }: UseWordDetectionProps) {
@@ -46,7 +49,7 @@ export function useWordDetection({
     lastProcessedMessageRef.current = data.text;
 
     // Use the utility function to detect word guesses
-    const result = detectWordGuess(data.text, currentWord);
+    const result = detectWordGuess(data.text, currentWord, language);
 
     if (result.isCorrect) {
       onCorrectGuess();
