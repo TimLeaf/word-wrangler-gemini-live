@@ -12,7 +12,10 @@ slug: quality-foundation
 - ✅ **server UT の足場作り**：pytest 導入。純粋ロジック層の UT を整備
 - ✅ **client 自動デプロイ**：main マージで GitHub Actions → Cloud Run（`asia-northeast1`）。Workload Identity Federation で keyless 認証。サービスは非公開（`roles/run.invoker` を本人のみ）。詳細は `.steering/2026-05-07/client-deploy-to-gcp/`
 - ✅ **server 自動デプロイ**：main マージで GitHub Actions → Pipecat Cloud（`.github/workflows/deploy-server.yml`、`uv run pcc deploy --yes`）。認証は PAT (`PIPECAT_TOKEN`)、secret_set は手動運用。詳細は `.steering/2026-05-16/server-auto-deploy-to-pcc/`
-- ⏳ **未着手**：`ty`、パイプライン統合テスト、E2E スモーク、デプロイ後ヘルスチェック、INV-3 の `WordWrangler.tsx` BotStoppedSpeaking dedup テスト、Branch Protection の必須チェック化
+- ✅ **server `ty` 型チェック導入**（2026-05-20）：CI に `uv run ty check` を追加
+- ✅ **INV-3 `BotStoppedSpeaking` dedup テスト**：`useFirstBotStoppedSpeaking.test.ts` で 4 ケースカバー（`WordWrangler.tsx` からフック切り出し済み）
+- ✅ **`api/start` 入力バリデーション**（2026-05-20）：不正 JSON / 非オブジェクト / 未知 personality を 400 で拒否、UT 6 ケース
+- ⏳ **未着手**：パイプライン統合テスト、E2E スモーク、デプロイ後ヘルスチェック、Branch Protection の必須チェック化
 - ⏳ **新規追加スコープ（2026-05-18）**：ライブラリ更新を安全に回せる体制（Dependabot/Renovate、定期更新フロー）。下記「ライブラリ更新を支える」節を参照
 
 ## プロダクトビジョン
@@ -23,7 +26,7 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 
 - ~~現状 `server/` `client/` ともにテストが 0 件~~ → Vitest / pytest を導入し、純粋ロジック層の UT を整備済み。引き続きカバレッジ拡大が課題
 - 一番怖いのは **既存機能の破壊**、特に「デプロイ後に音声が出ない」など、ユーザーがアプリを開いた瞬間に体験するレベルのリグレッション
-- ~~既存の `.github/workflows/` はビルド / Lint / テストの CI が未整備~~ → PR CI 整備済み。`ty` / 型チェックの拡充と、パイプライン統合テストが残課題
+- ~~既存の `.github/workflows/` はビルド / Lint / テストの CI が未整備~~ → PR CI 整備済み（client: eslint + vitest + build、server: ruff + ty + pytest）。残課題はパイプライン統合テスト
 - デプロイは **client 側のみ自動化済み**（Cloud Run）。server 側は依然として手動で、main マージ後の反映漏れやプロトコル不整合のリスクが残る
 - Pipecat + Gemini Live は非決定的なリアルタイム系のため、UT カバレッジを盲目的に追うのではなく、**層ごとに目的を分けた現実的な戦略**が必要
 
@@ -33,7 +36,7 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 
 - **純粋ロジック層の UT** ✅ 着手済み（拡大中）
   - server: プロンプト組み立て、お題リスト管理、ゲーム状態遷移などの純粋関数
-  - client: `detectWordGuess`、`useGameState` を実装済み。残り: `WordWrangler.tsx` の BotStoppedSpeaking dedup、`app/api/start/route.ts` の入力バリデーション
+  - client: `detectWordGuess`、`useGameState`、`useFirstBotStoppedSpeaking` (INV-3 dedup)、`app/api/start/route.ts` (入力バリデーション) を実装済み
 - **パイプライン統合テスト（中優先）** ⏳ 未着手
   - Pipecat の `PipelineRunner` をモック音声フレームで回し、フレームの流れと状態遷移を検証
   - Gemini Live 自体はモック化し、応答内容ではなく「呼ばれ方」を assert
@@ -41,7 +44,7 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
   - 実 Daily ルームを立てて 1 ターン回す
   - PR ごとではなく nightly または手動トリガーで実行
 - **PR CI** ✅ 完了（拡張余地あり）
-  - server: `ruff` / `pytest` 稼働中。`ty` 追加が残課題
+  - server: `ruff` / `ty` / `pytest` 稼働中
   - client: `eslint` / `vitest` / `next build` 稼働中。専用 `tsc` ステップは未追加（`next build` で型チェックは走る）
   - 既に PR ごとに走るが、GitHub Branch Protection の「必須チェック」化はまだ
 - **自動デプロイ（main マージ時）**
