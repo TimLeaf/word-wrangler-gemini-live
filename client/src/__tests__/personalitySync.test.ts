@@ -15,20 +15,22 @@ const BOT_PY_PATH = resolve(
 
 const botSource = readFileSync(BOT_PY_PATH, "utf-8");
 
-// `PERSONALITY_PRESETS = { ... }` ブロックを抽出して dict のキーを取り出す。
-// 抽出失敗時は server/bot.py の定義スタイルが変わっている可能性が高い。
-function extractServerPresetKeys(source: string): string[] {
+// `PERSONALITY_KEYS = ("a", "b", ...)` の中身を抽出。
+// 2026-05-20 以降 PERSONALITY_PRESETS は 2 段辞書 (`{lang: {personality: prompt}}`)
+// になったため、単一源泉のタプル `PERSONALITY_KEYS` を cross-language 同期チェックの
+// アンカーとして使う。
+function extractServerPersonalityKeys(source: string): string[] {
   const blockMatch = source.match(
-    /PERSONALITY_PRESETS\s*=\s*\{([\s\S]*?)\n\}/
+    /PERSONALITY_KEYS\s*=\s*\(([\s\S]*?)\)/
   );
   if (!blockMatch) {
     throw new Error(
-      "server/bot.py から PERSONALITY_PRESETS = { ... } ブロックを抽出できませんでした。" +
+      "server/bot.py から PERSONALITY_KEYS = (...) タプルを抽出できませんでした。" +
         "定義スタイルが変わっていないか確認してください。"
     );
   }
   const body = blockMatch[1];
-  const keyRegex = /^\s*"([a-z_]+)"\s*:/gm;
+  const keyRegex = /"([a-z_]+)"/g;
   const keys: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = keyRegex.exec(body)) !== null) {
@@ -51,16 +53,16 @@ function extractServerDefaultPersonality(source: string): string {
 }
 
 describe("INV-2: PERSONALITY_PRESETS sync between client and server", () => {
-  it("client の PersonalityType と server の PERSONALITY_PRESETS のキー集合が一致する", () => {
+  it("client の PersonalityType と server の PERSONALITY_KEYS が一致する", () => {
     const clientKeys = new Set(Object.keys(PERSONALITY_PRESETS));
-    const serverKeys = new Set(extractServerPresetKeys(botSource));
+    const serverKeys = new Set(extractServerPersonalityKeys(botSource));
 
     const onlyInClient = [...clientKeys].filter((k) => !serverKeys.has(k));
     const onlyInServer = [...serverKeys].filter((k) => !clientKeys.has(k));
 
     expect(
       { onlyInClient, onlyInServer },
-      "client/src/types/personality.ts の PersonalityType と server/bot.py の PERSONALITY_PRESETS を見比べて両側を揃えてください"
+      "client/src/types/personality.ts の PersonalityType と server/bot.py の PERSONALITY_KEYS を見比べて両側を揃えてください"
     ).toEqual({ onlyInClient: [], onlyInServer: [] });
   });
 
