@@ -1,13 +1,21 @@
-import { TRANSCRIPT_PATTERNS } from '@/constants/gameConstants';
+import { GUESS_PATTERNS } from '@/constants/gameConstants';
+import { Language } from '@/types/language';
 
 /**
- * Checks if a transcript contains a correct guess for the target word
+ * Checks if a transcript contains a correct guess for the target word.
+ *
+ * 言語ごとに canonical な推測フレーズが異なるため、`GUESS_PATTERNS[language]` を
+ * 切り替える。server 側の `CANONICAL_GUESS_PHRASES` と対応している。
  */
-export function detectWordGuess(transcript: string, targetWord: string) {
+export function detectWordGuess(
+  transcript: string,
+  targetWord: string,
+  language: Language = 'en'
+) {
   const currentWordLower = targetWord.toLowerCase().trim();
+  const guessPattern = GUESS_PATTERNS[language] ?? GUESS_PATTERNS.en;
 
   // Primary detection: Look for explicit guesses
-  const guessPattern = TRANSCRIPT_PATTERNS.GUESS_PATTERN;
   const guessMatch = transcript.match(guessPattern);
 
   if (guessMatch) {
@@ -16,8 +24,10 @@ export function detectWordGuess(transcript: string, targetWord: string) {
       .toLowerCase()
       .trim();
 
-    // Remove articles ("a", "an", "the") from the beginning of the guessed word
-    guessedWord = guessedWord.replace(/^(a|an|the)\s+/i, '');
+    if (language === 'en') {
+      // Remove articles ("a", "an", "the") from the beginning of the guessed word
+      guessedWord = guessedWord.replace(/^(a|an|the)\s+/i, '');
+    }
 
     return {
       isCorrect: guessedWord === currentWordLower,
