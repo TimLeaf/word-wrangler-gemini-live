@@ -39,5 +39,39 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      - name: Capture pre-deploy active deployment ID
+        id: pre
+        run: |
+          set -euo pipefail
+          output=$(uv run pcc agent status word-wrangler 2>&1 || true)
+          echo "$output"
+          prev_id=$(echo "$output" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -n1 || true)
+          echo "prev_id=$prev_id" >> "$GITHUB_OUTPUT"
+          echo "Previous active deployment ID: ${prev_id:-<none>}"
+
       - name: Deploy to Pipecat Cloud
         run: uv run pcc deploy --yes
+
+      - name: Verify deploy rolled out
+        env:
+          PREV_ID: ${{ steps.pre.outputs.prev_id }}
+        run: |
+          set -euo pipefail
+          sleep 10
+          output=$(uv run pcc agent status word-wrangler 2>&1)
+          echo "$output"
+          new_id=$(echo "$output" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -n1 || true)
+          echo "New active deployment ID: ${new_id:-<none>}"
+          if [ -z "$new_id" ]; then
+            echo "::error::Could not parse Active Deployment ID from pcc agent status output"
+            exit 1
+          fi
+          if [ -n "$PREV_ID" ] && [ "$new_id" = "$PREV_ID" ]; then
+            echo "::error::Active Deployment ID did not change after deploy (still $new_id) — rollout may have failed"
+            exit 1
+          fi
+          if ! echo "$output" | grep -q "Ready"; then
+            echo "::error::Agent word-wrangler is not in Ready state after deploy"
+            exit 1
+          fi
+          echo "Deploy verified: new deployment $new_id is Ready"
