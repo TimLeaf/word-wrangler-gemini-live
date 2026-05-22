@@ -20,6 +20,16 @@
       "matchManagers": ["github-actions"],
       "groupName": "github-actions",
       "groupSlug": "github-actions"
+    },
+    {
+      "description": "client-react 1.5.0 has broken packaging (dist/index.d.ts uses unscoped imports), causing PipecatClient type re-declaration in next build. Re-evaluate when upstream ships a fix.",
+      "matchPackageNames": ["@pipecat-ai/client-react"],
+      "allowedVersions": "<1.5.0"
+    },
+    {
+      "description": "eslint 10 is incompatible with eslint-plugin-react bundled by eslint-config-next 16 (contextOrFilename.getFilename is not a function). Re-evaluate when eslint-config-next updates the plugin.",
+      "matchPackageNames": ["eslint"],
+      "allowedVersions": "<10"
     }
   ],
   "vulnerabilityAlerts": {
