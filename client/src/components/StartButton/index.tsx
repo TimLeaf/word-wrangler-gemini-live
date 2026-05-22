@@ -1,5 +1,5 @@
-import { BUTTON_TEXT } from "@/constants/gameConstants";
 import { useConnectionState } from "@/hooks/useConnectionState";
+import { useTexts } from "@/hooks/useTexts";
 import { IconArrowRight } from "@tabler/icons-react";
 
 interface StartGameButtonProps {
@@ -15,10 +15,11 @@ export function StartGameButton({
 }: StartGameButtonProps) {
   const { isConnecting, isDisconnecting, toggleConnection } =
     useConnectionState(onGameStarted, onGameEnded);
+  const { buttonText } = useTexts();
 
   // Show spinner during connection process
   const showSpinner = isConnecting;
-  const btnText = isGameEnded ? BUTTON_TEXT.RESTART : BUTTON_TEXT.START;
+  const btnText = isGameEnded ? buttonText.RESTART : buttonText.START;
 
   return (
     <div className="flex justify-center">
@@ -29,7 +30,7 @@ export function StartGameButton({
       >
         <>
           <span className="styled-button-text">
-            {isConnecting ? BUTTON_TEXT.CONNECTING : btnText}
+            {isConnecting ? buttonText.CONNECTING : btnText}
           </span>
           <span className="styled-button-icon">
             {showSpinner ? (
