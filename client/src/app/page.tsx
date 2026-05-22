@@ -3,9 +3,14 @@
 import { Card, CardInner } from '@/components/Card';
 import { WordWrangler } from '@/components/Game/WordWrangler';
 import { StartGameButton } from '@/components/StartButton';
-import { GAME_TEXT } from '@/constants/gameConstants';
 import { useConfigurationSettings } from '@/contexts/Configuration';
-import { PERSONALITY_PRESETS, PersonalityType } from '@/types/personality';
+import { useTexts } from '@/hooks/useTexts';
+import { LANGUAGE_PRESETS, Language } from '@/types/language';
+import {
+  PERSONALITY_LABELS_BY_LANG,
+  PERSONALITY_PRESETS,
+  PersonalityType,
+} from '@/types/personality';
 import {
   IconArrowForwardUp,
   IconCheck,
@@ -25,6 +30,8 @@ export default function Home() {
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
   const config = useConfigurationSettings();
+  const { gameText } = useTexts();
+  const personalityLabels = PERSONALITY_LABELS_BY_LANG[config.language];
 
   useEffect(() => {
     if (gameEnded) {
@@ -44,12 +51,12 @@ export default function Home() {
               <Image src={Star} alt="Star" priority />
             </div>
             <CardInner>
-              <h2 className="text-xl font-extrabold">{GAME_TEXT.finalScore}</h2>
+              <h2 className="text-xl font-extrabold">{gameText.finalScore}</h2>
               <p className="text-4xl font-extrabold text-emerald-700 bg-emerald-50 rounded-full px-4 py-4 my-4">
                 {score}
               </p>
               <p className="font-medium text-slate-500">
-                {GAME_TEXT.finalScoreMessage}{' '}
+                {gameText.finalScoreMessage}{' '}
                 <span className="text-slate-700 font-extrabold">
                   {bestScore}
                 </span>
@@ -62,7 +69,7 @@ export default function Home() {
                   target="_blank"
                   rel="noopener noreferrer">
                   <IconCode size={24} />
-                  View project source code
+                  {gameText.viewSourceCode}
                 </Link>
               </div>
             </CardInner>
@@ -97,7 +104,7 @@ export default function Home() {
             <CardInner>
               <div className="flex flex-col gap-5 lg:gap-8 text-center mt-[50px] lg:mt-[100px]">
                 <h2 className="text-xl font-extrabold">
-                  {GAME_TEXT.introTitle}
+                  {gameText.introTitle}
                 </h2>
                 <div className="flex flex-col gap-3 lg:gap-4">
                   <div className="flex flex-row gap-3 relative">
@@ -105,7 +112,7 @@ export default function Home() {
                       <IconCheck size={24} />
                     </div>
                     <div className="flex-1 flex h-[53px] lg:h-auto bg-slate-100 rounded-full text-slate-500 leading-5 px-12 items-center justify-center font-semibold text-pretty text-sm lg:text-base">
-                      {GAME_TEXT.introGuide1}
+                      {gameText.introGuide1}
                     </div>
                   </div>
                   <div className="flex flex-row gap-3 relative">
@@ -113,7 +120,7 @@ export default function Home() {
                       <IconX size={24} />
                     </div>
                     <div className="flex-1 flex h-[53px] lg:h-auto bg-slate-100 rounded-full text-slate-500 leading-5 px-12 items-center justify-center font-semibold text-pretty text-sm lg:text-base">
-                      {GAME_TEXT.introGuide2}
+                      {gameText.introGuide2}
                     </div>
                   </div>
                   <div className="flex flex-row gap-3 relative">
@@ -121,28 +128,41 @@ export default function Home() {
                       <IconArrowForwardUp size={24} />
                     </div>
                     <div className="flex-1 flex h-[53px] lg:h-auto bg-slate-100 rounded-full text-slate-500 leading-5 px-12 items-center justify-center font-semibold text-pretty text-sm lg:text-base">
-                      {GAME_TEXT.introGuide3}
+                      {gameText.introGuide3}
                     </div>
                   </div>
                 </div>
               </div>
               <div className="flex-1 bg-slate-100 h-[1px] my-4 lg:my-6" />
-              <div>
+              <div className="flex flex-col lg:flex-row gap-4">
                 <label className="font-bold flex flex-col gap-2 flex-1">
-                  {GAME_TEXT.aiPersonality}
+                  {gameText.language}
+                  <select
+                    className="rounded-xl h-11 font-normal"
+                    value={config.language}
+                    onChange={(e) =>
+                      config.setLanguage(e.target.value as Language)
+                    }>
+                    {Object.entries(LANGUAGE_PRESETS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="font-bold flex flex-col gap-2 flex-1">
+                  {gameText.aiPersonality}
                   <select
                     className="rounded-xl h-11 font-normal"
                     value={config.personality}
                     onChange={(e) =>
                       config.setPersonality(e.target.value as PersonalityType)
                     }>
-                    {Object.entries(PERSONALITY_PRESETS).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      )
-                    )}
+                    {Object.keys(PERSONALITY_PRESETS).map((value) => (
+                      <option key={value} value={value}>
+                        {personalityLabels[value as PersonalityType]}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>

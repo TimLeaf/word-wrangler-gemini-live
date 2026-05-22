@@ -1,6 +1,7 @@
-import { GAME_STATES, GAME_TEXT } from "@/constants/gameConstants";
+import { GAME_STATES } from "@/constants/gameConstants";
 import { useConfigurationSettings } from "@/contexts/Configuration";
 import { useConnectionState } from "@/hooks/useConnectionState";
+import { useTexts } from "@/hooks/useTexts";
 import { useFirstBotStoppedSpeaking } from "@/hooks/useFirstBotStoppedSpeaking";
 import { useGameState } from "@/hooks/useGameState";
 import { useGameTimer } from "@/hooks/useGameTimer";
@@ -22,6 +23,7 @@ export const WordWrangler: React.FC<{
 }> = ({ onGameEnded }) => {
   const currentScoreRef = useRef(0);
   const { language } = useConfigurationSettings();
+  const { gameText } = useTexts();
   const gameState = useGameState({ language });
   const visualFeedback = useVisualFeedback();
   const { isConnected, client } = useConnectionState();
@@ -206,7 +208,7 @@ export const WordWrangler: React.FC<{
             disabled={gameState.gameState !== GAME_STATES.ACTIVE}
           >
             <IconCircleDashedCheck size={24} />
-            {GAME_TEXT.correct}
+            {gameText.correct}
           </button>
           <button
             className="button outline w-full lg:w-auto"
@@ -217,7 +219,7 @@ export const WordWrangler: React.FC<{
             }
           >
             <IconDoorExit size={24} />
-            End Game
+            {gameText.endGame}
           </button>
         </footer>
       </div>

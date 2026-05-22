@@ -1,4 +1,5 @@
-import { GAME_STATES, GAME_TEXT, GameState } from "@/constants/gameConstants";
+import { GAME_STATES, GameState } from "@/constants/gameConstants";
+import { useTexts } from "@/hooks/useTexts";
 import { IconArrowForwardUp, IconClockPause } from "@tabler/icons-react";
 import React from "react";
 import { GameWord } from "./GameWord";
@@ -28,11 +29,13 @@ export const GameContent: React.FC<GameContentProps> = ({
   //onCorrect,
   onSkip,
 }) => {
+  const { gameText } = useTexts();
+
   // Idle or Connecting State
   if (gameState === GAME_STATES.IDLE || gameState === GAME_STATES.CONNECTING) {
     return (
       <div className={styles.simpleLoadingPlaceholder}>
-        {GAME_TEXT.startingGame}
+        {gameText.startingGame}
       </div>
     );
   }
@@ -45,7 +48,7 @@ export const GameContent: React.FC<GameContentProps> = ({
           <IconClockPause size={42} className="opacity-50" />
         </span>
         <span className="text-white text-2xl font-bold">
-          {GAME_TEXT.waitingForIntro}
+          {gameText.waitingForIntro}
         </span>
       </div>
     );
@@ -56,12 +59,12 @@ export const GameContent: React.FC<GameContentProps> = ({
     return (
       <div className={styles.gameReadyArea}>
         <div className={styles.gameResults}>
-          <h2>{GAME_TEXT.gameOver}</h2>
+          <h2>{gameText.gameOver}</h2>
           <p>
-            {GAME_TEXT.finalScore}: <strong>{score}</strong>
+            {gameText.finalScore}: <strong>{score}</strong>
           </p>
         </div>
-        <div className={styles.statusNote}>{GAME_TEXT.clickToStart}</div>
+        <div className={styles.statusNote}>{gameText.clickToStart}</div>
       </div>
     );
   }
@@ -83,8 +86,8 @@ export const GameContent: React.FC<GameContentProps> = ({
         >
           <IconArrowForwardUp size={24} className="opacity-50" />
           {skipsRemaining > 0
-            ? GAME_TEXT.skipsRemaining(skipsRemaining)
-            : GAME_TEXT.noSkips}
+            ? gameText.skipsRemaining(skipsRemaining)
+            : gameText.noSkips}
         </button>
       </div>
     </div>

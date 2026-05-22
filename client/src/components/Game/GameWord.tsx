@@ -1,4 +1,4 @@
-import { GAME_TEXT } from "@/constants/gameConstants";
+import { useTexts } from "@/hooks/useTexts";
 import React from "react";
 import styles from "./WordWrangler.module.css";
 
@@ -13,13 +13,14 @@ export const GameWord: React.FC<GameWordProps> = ({
   showAutoDetected,
   showIncorrect,
 }) => {
+  const { gameText } = useTexts();
   return (
     <div
       className={`${styles.currentWord} ${
         showAutoDetected ? styles.correctWordDetected : ""
       } ${showIncorrect ? styles.incorrectWordDetected : ""}`}
     >
-      <span className={styles.helpText}>{GAME_TEXT.describeWord}</span>
+      <span className={styles.helpText}>{gameText.describeWord}</span>
       <span className={styles.word}>{word}</span>
 
       {showAutoDetected && <CorrectOverlay />}
