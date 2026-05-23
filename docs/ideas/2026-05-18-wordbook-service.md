@@ -1,8 +1,17 @@
 # カスタム単語帳サービス
 
 作成日: 2026-05-18
+最終更新: 2026-05-23（Phase 1 MVP 完了）
 slug: wordbook-service
 関連: [`2026-05-18-i18n-japanese.md`](./2026-05-18-i18n-japanese.md), [`2026-05-04-quality-foundation.md`](./2026-05-04-quality-foundation.md)
+
+## 進捗サマリ（2026-05-23 時点）
+
+- ✅ **Phase 1 MVP**: `wordbook/` を Cloud Run（`asia-northeast1`、非公開）に配備。自分専用・認証なし・ja/en 両対応・Firestore（database `wordbook`）。詳細は `.steering/2026-05-23/wordbook-service-mvp/`
+  - PR #51 scaffolding / #52 Firestore + Wordbook CRUD（Server Actions）/ #53 単語 CRUD + デフォルト単語帳機能 / #54 Cloud Run デプロイ / #55 Server Actions proxy CSRF fix
+  - 単語帳 CRUD、単語 CRUD、★ デフォルト単語帳機能、`/` がデフォルトへの誘導
+- ⏳ **Phase 2**: Word Wrangler 本体との API 連携 + `usageCount` 増分（未着手、必要になったタイミングで steering 起こす）
+- ⏸️ **Phase 3**: 共有・公開・複数ユーザー対応（保留）
 
 ## プロダクトビジョン
 
@@ -103,15 +112,27 @@ slug: wordbook-service
 - `client/` 側の「単語の出所」が変わる → `useGameState` の単語供給ロジックを差し替え可能にする
 - CI / デプロイの workflow が増える → `quality-foundation` に「3 サービスをどう管理するか」観点が追加
 
-## 段階計画（案）
+## 段階計画
 
-1. **Phase 0**: idea A（多言語）で `language` 概念を client に導入
-2. **Phase 1**: 単語帳 MVP（自分専用、認証なし or シンプル）。Word Wrangler は引き続きハードコードリストを使う
-3. **Phase 2**: Word Wrangler と API 連携。設定で単語帳選択可能に
-4. **Phase 3**: 共有・公開機能、複数ユーザー対応
+1. ✅ **Phase 0**: idea A（多言語）で `language` 概念を client に導入（完了済み）
+2. ✅ **Phase 1**: 単語帳 MVP（自分専用、認証なし、Cloud Run + Firestore）。Word Wrangler は引き続きハードコードリストを使う（2026-05-23 完了）
+3. ⏳ **Phase 2**: Word Wrangler と API 連携。設定で単語帳選択可能に、`usageCount` 増分
+4. ⏸️ **Phase 3**: 共有・公開機能、複数ユーザー対応（個人プロジェクトとして優先度低、保留判断）
 
-## 次のアクション
+## Phase 1 確定事項（実装後の反映）
 
-1. 論点 1（モノレポ配置）と論点 2（バックエンド選定）を実装プラン段階で決める
-2. idea A の `language` 設計と整合させる
-3. MVP のデータモデルと API 契約をスケッチ
+- **モノレポ配置**: `wordbook/` を `client/` `server/` と並列（論点 1 確定）
+- **バックエンド**: Firestore（database `wordbook`、Spark プラン無料枠）+ Next.js 15 / React 19、Cloud Run `asia-northeast1`（論点 2 確定）
+- **認証**: なし（Cloud Run の `roles/run.invoker` を本人のみで非公開化、論点 3 確定）
+- **API 契約**: Phase 1 では Word Wrangler 連携をやらないため未定。Phase 2 で詰める（論点 4）
+- **データモデル**:
+  - `wordbooks/{id}`: `name` / `language` (`ja` | `en`) / `isDefault?: boolean` / `createdAt` / `updatedAt`
+  - `wordbooks/{id}/words/{wordId}` サブコレクション: `text` / `createdAt` / `usageCount` (default 0)
+- **デフォルト単語帳**: `/` を開いたらデフォルトの詳細にリダイレクト、未設定時は `/wordbooks` 一覧へ
+
+## Phase 2 に向けたメモ
+
+- API 契約: `GET /api/wordbooks/{id}/words?orderBy=usageCount&limit=30` を Word Wrangler の Next.js Route Handler 経由で叩く想定
+- 認証: 同じ GCP プロジェクト内なので、Cloud Run 間の service-to-service 認証（identity token）で OK
+- `usageCount` 増分: ゲーム終了時に `FieldValue.increment(1)` を該当 word doc に対して発行
+- 着手時に `.steering/{date}/wordbook-phase2-integration/` を起こす
