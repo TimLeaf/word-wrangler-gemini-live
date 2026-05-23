@@ -69,4 +69,22 @@ CRUD は `src/app/actions.ts` の `"use server"` 関数で実装。Client Compon
 
 ## デプロイ
 
-PR-1 時点では未配備。PR-4 で `.github/workflows/deploy-wordbook.yml` を新設して Cloud Run（`asia-northeast1`、非公開）に自動デプロイする計画。詳細は `.steering/2026-05-23/wordbook-service-mvp/plan.md`。
+Google Cloud Run（asia-northeast1）に GitHub Actions で自動デプロイ。`main` への push で `wordbook/**` または `.github/workflows/deploy-wordbook.yml` が変わったときに `.github/workflows/deploy-wordbook.yml` が起動する。
+
+- 認証: Workload Identity Federation（`client/` と同じ deployer SA `github-actions-deployer@...` を流用）
+- イメージ: `wordbook/Dockerfile`（client と同型、Next.js standalone）→ Artifact Registry `asia-northeast1-docker.pkg.dev/<project>/word-wrangler/word-wrangler-wordbook:<sha>`
+- Cloud Run サービス: `word-wrangler-wordbook`、port 3001
+- **Runtime SA は専用**: `cloud-run-wordbook-runtime@<project>.iam.gserviceaccount.com`（client 用 SA とは分離、`roles/datastore.user` のみ付与）
+- 非公開（`roles/run.invoker` を本人のみ）
+- ブラウザ確認は `gcloud run services proxy word-wrangler-wordbook --region=asia-northeast1` 経由
+
+GCP 側の構成・運用コマンドは `.steering/2026-05-23/wordbook-service-mvp/tasks.md` の PR-4 セクションを参照。
+
+### GitHub Secrets
+
+| Secret | 値 | 既存/新規 |
+|---|---|---|
+| `GCP_WIF_PROVIDER` | Workload Identity Provider のフルパス | 既存（client と共有） |
+| `GCP_SERVICE_ACCOUNT` | deployer SA (`github-actions-deployer@...`) | 既存（client と共有） |
+| `GCP_PROJECT_ID` | GCP プロジェクト ID | 既存（client と共有） |
+| `GCP_WORDBOOK_RUNTIME_SA` | `cloud-run-wordbook-runtime@<project>.iam.gserviceaccount.com` | **新規（PR-4 で追加）** |
