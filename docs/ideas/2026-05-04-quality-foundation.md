@@ -1,11 +1,11 @@
 # Quality Foundation: テスト & CI/CD 整備
 
 作成日: 2026-05-04
-最終更新: 2026-05-18
+最終更新: 2026-05-23
 slug: quality-foundation
 関連: [`2026-05-18-i18n-japanese.md`](./2026-05-18-i18n-japanese.md), [`2026-05-18-wordbook-service.md`](./2026-05-18-wordbook-service.md)
 
-## 進捗サマリ（2026-05-16 時点）
+## 進捗サマリ（2026-05-23 時点）
 
 - ✅ **PR CI 整備**（`.github/workflows/ci.yml`）：client は `eslint` + `vitest` + `next build`、server は `ruff` + `pytest`。`dorny/paths-filter` で変更があった側のみ実行
 - ✅ **client UT の足場作り**：Vitest 導入。INV-4 `detectWordGuess`、INV-3 `useGameState` の UT 実装済み（5 ファイル / 25 ケース）
@@ -15,8 +15,11 @@ slug: quality-foundation
 - ✅ **server `ty` 型チェック導入**（2026-05-20）：CI に `uv run ty check` を追加
 - ✅ **INV-3 `BotStoppedSpeaking` dedup テスト**：`useFirstBotStoppedSpeaking.test.ts` で 4 ケースカバー（`WordWrangler.tsx` からフック切り出し済み）
 - ✅ **`api/start` 入力バリデーション**（2026-05-20）：不正 JSON / 非オブジェクト / 未知 personality を 400 で拒否、UT 6 ケース
-- ⏳ **未着手**：パイプライン統合テスト、E2E スモーク、デプロイ後ヘルスチェック、Branch Protection の必須チェック化
-- ⏳ **新規追加スコープ（2026-05-18）**：ライブラリ更新を安全に回せる体制（Dependabot/Renovate、定期更新フロー）。下記「ライブラリ更新を支える」節を参照
+- ✅ **Branch Protection 必須チェック化**（2026-05-22）：`main` で client / server CI を required、strict mode + admin enforce
+- ✅ **デプロイ後ヘルスチェック**（2026-05-23, PR #47）：`deploy-server.yml` で `pcc agent status` の Active Deployment ID 前後比較 + `Ready` 検証
+- ✅ **Renovate 導入**（2026-05-22）：週次（金曜 9am JST）で minor/patch を自動 PR、major は別ラベル運用。既知不具合の pin ルール込み（`@pipecat-ai/client-react <1.5.0` / `eslint <10`）
+- ⏳ **未着手**：パイプライン統合テスト
+- ⏸️ **保留**：E2E スモーク（実 Daily ルーム利用料が発生、個人プロジェクトとしては優先度低と判断）
 
 ## プロダクトビジョン
 
@@ -40,20 +43,22 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 - **パイプライン統合テスト（中優先）** ⏳ 未着手
   - Pipecat の `PipelineRunner` をモック音声フレームで回し、フレームの流れと状態遷移を検証
   - Gemini Live 自体はモック化し、応答内容ではなく「呼ばれ方」を assert
-- **E2E スモーク（低頻度・高シグナル）** ⏳ 未着手
+- **E2E スモーク（低頻度・高シグナル）** ⏸️ 保留
   - 実 Daily ルームを立てて 1 ターン回す
   - PR ごとではなく nightly または手動トリガーで実行
-- **PR CI** ✅ 完了（拡張余地あり）
+  - 個人プロジェクトとしては Daily 利用料の費用対効果が薄く、当面は実装しない判断（必要性が出たら別ワークストリームで起動）
+- **PR CI** ✅ 完了
   - server: `ruff` / `ty` / `pytest` 稼働中
   - client: `eslint` / `vitest` / `next build` 稼働中。専用 `tsc` ステップは未追加（`next build` で型チェックは走る）
-  - 既に PR ごとに走るが、GitHub Branch Protection の「必須チェック」化はまだ
+  - GitHub Branch Protection で `Client (Next.js)` / `Server (Pipecat / Python)` を required（strict mode + admin enforce, 2026-05-22）
 - **自動デプロイ（main マージ時）**
   - client → Cloud Run ✅ 完了（`.github/workflows/deploy-client.yml`、Workload Identity Federation、非公開）
   - server → Pipecat Cloud ✅ 完了（`.github/workflows/deploy-server.yml`、PAT 認証、`uv run pcc deploy --yes`）
   - client / server は別ワークフローで運用（変更頻度と失敗時影響範囲が異なるため）
-- **デプロイ後ヘルスチェック** ⏳ 未着手
-  - bot 起動 → Daily ルーム作成 → 初回挨拶までを smoke check
-  - 失敗時は自動ロールバック or 通知
+- **デプロイ後ヘルスチェック** ✅ 完了（2026-05-23, PR #47）
+  - `deploy-server.yml` で deploy 前後の `pcc agent status word-wrangler` を比較し、Active Deployment ID の変化 + `Ready` 表示を検証
+  - 失敗時は workflow を fail（自動ロールバックは PCC 機能依存、必要になれば別タスク）
+  - 当初候補だった `pcc agent deployments` は flaky なため不採用
 
 ## ターゲットユーザー
 
@@ -72,10 +77,10 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 
 ### 取り組み候補
 
-- **Dependabot or Renovate 導入**
-  - 週次で minor/patch を自動 PR
-  - major は手動レビュー前提で別ルール
+- **Renovate 導入** ✅ 完了（2026-05-22）
+  - 週次（金曜 9am JST）で minor/patch を自動 PR、major は `major` ラベルで分離
   - 対象: client (`package.json`)、server (`uv.lock`)、GitHub Actions (`.github/workflows/`)
+  - Mend ダッシュボード `mode=auto`、`renovate.json` で既知不具合の pin（`@pipecat-ai/client-react <1.5.0` / `eslint <10`）
 - **更新検証チェックリストの自動化**
   - 既存 PR CI（lint / UT / build）を最低ラインに
   - パイプライン統合テストと E2E スモーク（未着手）が揃うと「更新 PR をマージしても壊れていない確証」が得られる
@@ -89,6 +94,6 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 
 ### 残タスクとの統合
 
-「未着手」リストに以下を追加：
-- Dependabot or Renovate の導入と運用ルール策定
-- パイプライン統合テスト / E2E スモークを「ライブラリ更新時の検証手段」として位置付ける
+- ✅ Renovate 導入と運用ルール策定（2026-05-22）
+- ⏳ パイプライン統合テストを「ライブラリ更新時の検証手段」として位置付ける（残タスク）
+- ⏸️ E2E スモークは費用対効果が薄く保留判断
