@@ -1,12 +1,40 @@
-export default function Home() {
+import { CreateWordbookForm } from "@/components/CreateWordbookForm";
+import { WordbookRow } from "@/components/WordbookRow";
+import { listWordbooks } from "@/lib/wordbooks";
+
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const wordbooks = await listWordbooks();
+
   return (
-    <main className="flex min-h-dvh items-center justify-center p-8">
-      <div className="rounded-2xl bg-white/90 px-8 py-6 shadow-lg">
-        <h1 className="text-2xl font-semibold">Hello Wordbook</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Phase 1 MVP scaffolding. Wordbook CRUD coming next.
+    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 p-6">
+      <header className="text-white">
+        <h1 className="text-3xl font-bold">Wordbook</h1>
+        <p className="mt-1 text-sm opacity-90">
+          Word Wrangler 用のカスタム単語帳を管理します。
         </p>
-      </div>
+      </header>
+
+      <section className="rounded-2xl bg-white/90 p-4 shadow">
+        <h2 className="mb-3 text-lg font-semibold">新しい単語帳</h2>
+        <CreateWordbookForm />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-white">単語帳一覧</h2>
+        {wordbooks.length === 0 ? (
+          <p className="rounded-xl bg-white/80 p-4 text-sm text-gray-600">
+            まだ単語帳がありません。上のフォームから作成してください。
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {wordbooks.map((wb) => (
+              <WordbookRow key={wb.id} wordbook={wb} />
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
