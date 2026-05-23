@@ -5,8 +5,10 @@ import {
   createWordbook,
   deleteWordbook,
   renameWordbook,
+  setDefaultWordbook,
 } from "@/lib/wordbooks";
-import { parseWordbookInput } from "@/lib/validation";
+import { addWord, deleteWord, updateWordText } from "@/lib/words";
+import { parseWordbookInput, parseWordText } from "@/lib/validation";
 
 export type ActionState = { error: string | null };
 
@@ -43,4 +45,49 @@ export async function renameWordbookAction(
 export async function deleteWordbookAction(id: string): Promise<void> {
   await deleteWordbook(id);
   revalidatePath("/");
+}
+
+export async function setDefaultWordbookAction(
+  id: string,
+  makeDefault: boolean,
+): Promise<void> {
+  await setDefaultWordbook(id, makeDefault);
+  revalidatePath("/");
+}
+
+export async function addWordAction(
+  wordbookId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = parseWordText(formData.get("text"));
+  if (!parsed.ok) {
+    return { error: parsed.message };
+  }
+  await addWord(wordbookId, parsed.value);
+  revalidatePath(`/wordbooks/${wordbookId}`);
+  return { error: null };
+}
+
+export async function updateWordAction(
+  wordbookId: string,
+  wordId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const parsed = parseWordText(formData.get("text"));
+  if (!parsed.ok) {
+    return { error: parsed.message };
+  }
+  await updateWordText(wordbookId, wordId, parsed.value);
+  revalidatePath(`/wordbooks/${wordbookId}`);
+  return { error: null };
+}
+
+export async function deleteWordAction(
+  wordbookId: string,
+  wordId: string,
+): Promise<void> {
+  await deleteWord(wordbookId, wordId);
+  revalidatePath(`/wordbooks/${wordbookId}`);
 }

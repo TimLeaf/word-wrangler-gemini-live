@@ -9,6 +9,14 @@ export type Wordbook = {
   id: string;
   name: string;
   language: Language;
+  isDefault: boolean;
   createdAt: number;
   updatedAt: number;
+};
+
+export type Word = {
+  id: string;
+  text: string;
+  createdAt: number;
+  usageCount: number;
 };

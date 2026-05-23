@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
   deleteWordbookAction,
   renameWordbookAction,
+  setDefaultWordbookAction,
   type ActionState,
 } from "@/app/actions";
 import type { Wordbook } from "@/types/wordbook";
@@ -59,14 +61,37 @@ export function WordbookRow({ wordbook }: { wordbook: Wordbook }) {
   }
 
   return (
-    <li className="flex items-center justify-between rounded-xl bg-white/95 p-4 shadow">
-      <div>
+    <li className="flex items-center justify-between gap-3 rounded-xl bg-white/95 p-4 shadow">
+      <form
+        action={async () => {
+          await setDefaultWordbookAction(wordbook.id, !wordbook.isDefault);
+        }}
+      >
+        <button
+          type="submit"
+          aria-label={
+            wordbook.isDefault ? "デフォルトを解除" : "デフォルトに設定"
+          }
+          title={
+            wordbook.isDefault ? "デフォルトを解除" : "デフォルトに設定"
+          }
+          className={`text-2xl leading-none ${
+            wordbook.isDefault ? "text-yellow-500" : "text-gray-300"
+          }`}
+        >
+          {wordbook.isDefault ? "★" : "☆"}
+        </button>
+      </form>
+      <Link
+        href={`/wordbooks/${wordbook.id}`}
+        className="min-w-0 flex-1 hover:opacity-80"
+      >
         <p className="text-lg font-medium">{wordbook.name}</p>
         <p className="text-xs text-gray-500">
           {wordbook.language === "ja" ? "日本語" : "English"} ・ 更新:{" "}
           {new Date(wordbook.updatedAt).toLocaleString()}
         </p>
-      </div>
+      </Link>
       <div className="flex gap-2">
         <button
           type="button"
