@@ -8,6 +8,7 @@ Word Wrangler は Pipecat と Google Gemini Live API を活用した、音声ベ
 
 - `client/` — Next.js 15 / React 19 のフロントエンド。詳細は `client/CLAUDE.md`
 - `server/` — Pipecat ベースの Python ボット。詳細は `server/CLAUDE.md`
+- `wordbook/` — カスタム単語帳サービス（Next.js 15 / React 19、Cloud Run + Firestore）。詳細は `wordbook/CLAUDE.md`。Word Wrangler 本体とは独立した別アプリで、Phase 1 MVP は連携なし
 
 それぞれのディレクトリにある `CLAUDE.md` に、コマンド・環境変数・アーキテクチャの詳細を記載している。作業対象のディレクトリ側を参照すること。
 
@@ -32,4 +33,5 @@ Daily ルーム
 ## デプロイ
 
 - サーバ：Pipecat Cloud（`server/CLAUDE.md` 参照）
-- クライアント：Vercel 推奨（`client/CLAUDE.md` 参照）
+- クライアント：Google Cloud Run / `asia-northeast1`（`client/CLAUDE.md` 参照）
+- Wordbook：Google Cloud Run / `asia-northeast1`（Phase 1 PR-4 で配備予定、`wordbook/CLAUDE.md` 参照）
