@@ -37,10 +37,19 @@ FIRESTORE_EMULATOR_HOST=localhost:8080 npm run dev
 - **ストレージ: Firestore**（Spark プラン無料枠内、Cloud Run と同じ GCP プロジェクト）
 - **Word Wrangler 本体との API 連携は Phase 2 で別ワークストリーム**
 
-データモデル（Phase 1 想定）:
+データモデル:
 
-- `Wordbook`: `id` / `name` / `language` (`ja` | `en`) / `createdAt` / `updatedAt`
-- `Word`: `id` / `wordbookId` / `text` / `createdAt` / `usageCount` (default 0、Phase 2 で `FieldValue.increment(1)` する想定)
+- `wordbooks/{id}`: `name` / `language` (`ja` | `en`) / `isDefault?: boolean` / `createdAt` / `updatedAt`
+  - `isDefault` は高々 1 件のみ true。`setDefaultWordbook` が batch で他の `isDefault` を clear して相互排他を維持する
+- `wordbooks/{id}/words/{wordId}`（**サブコレクション**）: `text` / `createdAt` / `usageCount` (default 0)
+  - 親 doc 削除時に Firestore は subcollection を自動削除しない → `deleteWordbook` で `deleteAllWordsIn` を呼んでバッチカスケード削除する
+  - Phase 2 で Word Wrangler が低使用順に取得する想定：`wordbooks/{id}/words` を `orderBy("usageCount", "asc")` で取得。サブコレクションの単一フィールドは Firestore が自動で index 作成するため index 設定不要
+
+ルーティング:
+
+- `/` — デフォルト単語帳が設定されていれば `/wordbooks/{defaultId}` にリダイレクト、未設定なら `/wordbooks` にリダイレクト（入口の振り分け専用）
+- `/wordbooks` — 単語帳一覧（作成・削除・名前変更・デフォルト切替）
+- `/wordbooks/[id]` — 単語帳詳細（単語の追加・編集・削除）
 
 ## 環境変数
 
@@ -51,8 +60,8 @@ FIRESTORE_EMULATOR_HOST=localhost:8080 npm run dev
 ## データレイヤ
 
 - Firestore データベース ID: `wordbook`（`(default)` ではない別 DB、論理分離のため）
-- コレクション: `wordbooks`（PR-2 時点）。`words` サブコレクションは PR-3 で追加
-- 永続化は `src/lib/wordbooks.ts` の関数を経由する。Server Actions (`src/app/actions.ts`) からのみ呼ばれる前提
+- ルートコレクション: `wordbooks`、サブコレクション: `wordbooks/{id}/words`
+- 永続化は `src/lib/wordbooks.ts` / `src/lib/words.ts` の関数を経由する。Server Actions (`src/app/actions.ts`) からのみ呼ばれる前提
 
 ## Server Actions
 

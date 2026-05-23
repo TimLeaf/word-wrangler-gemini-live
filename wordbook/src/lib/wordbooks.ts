@@ -1,10 +1,12 @@
 import { FieldValue } from "@google-cloud/firestore";
 import { getFirestore, WORDBOOKS_COLLECTION } from "./firestore";
+import { deleteAllWordsIn } from "./words";
 import type { Language, Wordbook } from "@/types/wordbook";
 
 type WordbookDoc = {
   name: string;
   language: Language;
+  isDefault?: boolean;
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
 };
@@ -18,6 +20,7 @@ function toWordbook(
     id,
     name: doc.name,
     language: doc.language,
+    isDefault: doc.isDefault === true,
     createdAt: doc.createdAt.toMillis(),
     updatedAt: doc.updatedAt.toMillis(),
   };
@@ -55,6 +58,62 @@ export async function renameWordbook(id: string, name: string): Promise<void> {
 }
 
 export async function deleteWordbook(id: string): Promise<void> {
+  // Firestore does not cascade-delete subcollections. Wipe `words/*` first
+  // so we don't leave orphaned documents behind.
+  await deleteAllWordsIn(id);
+  await getFirestore().collection(WORDBOOKS_COLLECTION).doc(id).delete();
+}
+
+export async function getWordbook(id: string): Promise<Wordbook | null> {
+  const doc = await getFirestore()
+    .collection(WORDBOOKS_COLLECTION)
+    .doc(id)
+    .get();
+  if (!doc.exists) {
+    return null;
+  }
+  return toWordbook(doc.id, doc.data() as FirebaseFirestore.DocumentData);
+}
+
+export async function getDefaultWordbook(): Promise<Wordbook | null> {
+  const snapshot = await getFirestore()
+    .collection(WORDBOOKS_COLLECTION)
+    .where("isDefault", "==", true)
+    .limit(1)
+    .get();
+  if (snapshot.empty) {
+    return null;
+  }
+  const doc = snapshot.docs[0];
+  return toWordbook(doc.id, doc.data());
+}
+
+// デフォルトは常に高々 1 つ。新たに id を default にする場合、既存の
+// default を batch で clear して相互排他を維持する。makeDefault=false の
+// ときは id を default 解除するだけ。
+export async function setDefaultWordbook(
+  id: string,
+  makeDefault: boolean,
+): Promise<void> {
   const db = getFirestore();
-  await db.collection(WORDBOOKS_COLLECTION).doc(id).delete();
+  const batch = db.batch();
+  if (makeDefault) {
+    const existing = await db
+      .collection(WORDBOOKS_COLLECTION)
+      .where("isDefault", "==", true)
+      .get();
+    existing.docs.forEach((doc) => {
+      if (doc.id !== id) {
+        batch.update(doc.ref, { isDefault: false });
+      }
+    });
+    batch.update(db.collection(WORDBOOKS_COLLECTION).doc(id), {
+      isDefault: true,
+    });
+  } else {
+    batch.update(db.collection(WORDBOOKS_COLLECTION).doc(id), {
+      isDefault: false,
+    });
+  }
+  await batch.commit();
 }

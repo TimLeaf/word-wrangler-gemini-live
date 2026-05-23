@@ -33,3 +33,22 @@ export function parseWordbookInput(
   }
   return { ok: true, value: { name, language: rawLanguage } };
 }
+
+export const WORD_TEXT_MAX_LENGTH = 120;
+
+export function parseWordText(rawText: unknown): ValidationResult<string> {
+  if (typeof rawText !== "string") {
+    return { ok: false, message: "text is required" };
+  }
+  const text = rawText.trim();
+  if (text.length === 0) {
+    return { ok: false, message: "text is required" };
+  }
+  if (text.length > WORD_TEXT_MAX_LENGTH) {
+    return {
+      ok: false,
+      message: `text must be ${WORD_TEXT_MAX_LENGTH} characters or fewer`,
+    };
+  }
+  return { ok: true, value: text };
+}
