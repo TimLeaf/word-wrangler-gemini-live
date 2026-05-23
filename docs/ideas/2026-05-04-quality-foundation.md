@@ -1,7 +1,7 @@
 # Quality Foundation: テスト & CI/CD 整備
 
 作成日: 2026-05-04
-最終更新: 2026-05-23
+最終更新: 2026-05-23 (PR #49)
 slug: quality-foundation
 関連: [`2026-05-18-i18n-japanese.md`](./2026-05-18-i18n-japanese.md), [`2026-05-18-wordbook-service.md`](./2026-05-18-wordbook-service.md)
 
@@ -18,7 +18,7 @@ slug: quality-foundation
 - ✅ **Branch Protection 必須チェック化**（2026-05-22）：`main` で client / server CI を required、strict mode + admin enforce
 - ✅ **デプロイ後ヘルスチェック**（2026-05-23, PR #47）：`deploy-server.yml` で `pcc agent status` の Active Deployment ID 前後比較 + `Ready` 検証
 - ✅ **Renovate 導入**（2026-05-22）：週次（金曜 9am JST）で minor/patch を自動 PR、major は別ラベル運用。既知不具合の pin ルール込み（`@pipecat-ai/client-react <1.5.0` / `eslint <10`）
-- ⏳ **未着手**：パイプライン統合テスト
+- ✅ **パイプライン統合テスト**（2026-05-23, PR #49）：`pipecat.tests.utils.run_test` で `user_aggregator → MockLLM → assistant_aggregator` の 3 段を組み立て、frame 契約と `LLMContext` 追記を assert。pytest-asyncio 導入
 - ⏸️ **保留**：E2E スモーク（実 Daily ルーム利用料が発生、個人プロジェクトとしては優先度低と判断）
 
 ## プロダクトビジョン
@@ -40,9 +40,11 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 - **純粋ロジック層の UT** ✅ 着手済み（拡大中）
   - server: プロンプト組み立て、お題リスト管理、ゲーム状態遷移などの純粋関数
   - client: `detectWordGuess`、`useGameState`、`useFirstBotStoppedSpeaking` (INV-3 dedup)、`app/api/start/route.ts` (入力バリデーション) を実装済み
-- **パイプライン統合テスト（中優先）** ⏳ 未着手
-  - Pipecat の `PipelineRunner` をモック音声フレームで回し、フレームの流れと状態遷移を検証
-  - Gemini Live 自体はモック化し、応答内容ではなく「呼ばれ方」を assert
+- **パイプライン統合テスト** ✅ 完了（2026-05-23, PR #49）
+  - `pipecat.tests.utils.run_test` で `LLMContextAggregatorPair` 周りの frame 契約を assert
+  - `server/tests/test_pipeline_integration.py` に 2 ケース（`LLMRunFrame` → assistant message 追加 / `TranscriptionFrame` → user message 追加）
+  - Gemini Live はモック化（応答内容ではなく「呼ばれ方」を assert）
+  - Finding: 実 LLM サービスが受け取るのは `LLMRunFrame` ではなく `LLMContextFrame`（aggregator が変換）。ライブラリ更新時に守るべき契約として明示化
 - **E2E スモーク（低頻度・高シグナル）** ⏸️ 保留
   - 実 Daily ルームを立てて 1 ターン回す
   - PR ごとではなく nightly または手動トリガーで実行
@@ -83,7 +85,8 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
   - Mend ダッシュボード `mode=auto`、`renovate.json` で既知不具合の pin（`@pipecat-ai/client-react <1.5.0` / `eslint <10`）
 - **更新検証チェックリストの自動化**
   - 既存 PR CI（lint / UT / build）を最低ラインに
-  - パイプライン統合テストと E2E スモーク（未着手）が揃うと「更新 PR をマージしても壊れていない確証」が得られる
+  - パイプライン統合テスト ✅ 完了（PR #49）。これで `LLMContextAggregatorPair` 周りの契約破壊を Renovate PR の CI で検知できる
+  - E2E スモークは保留判断（実 Daily 利用料 vs 個人プロジェクトの費用対効果）
 - **アップストリーム監視との統合**
   - 既存 `watch-upstream.yml`（pipecat-examples 上流監視）と並列で、依存ライブラリの release 動向も Issue 化する余地
 
@@ -95,5 +98,9 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 ### 残タスクとの統合
 
 - ✅ Renovate 導入と運用ルール策定（2026-05-22）
-- ⏳ パイプライン統合テストを「ライブラリ更新時の検証手段」として位置付ける（残タスク）
+- ✅ パイプライン統合テスト（2026-05-23, PR #49）— ライブラリ更新時の frame 契約検証手段として CI に組み込み済み
 - ⏸️ E2E スモークは費用対効果が薄く保留判断
+
+## ステータス（2026-05-23）
+
+idea C の当初スコープ + ライブラリ更新スコープは E2E スモーク（保留判断）を除いて完了。今後は新規 idea 着手時に発見した穴（例: 新 frame タイプ、新フロー）を都度 UT/統合テストに反映していく運用へ。
