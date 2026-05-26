@@ -33,7 +33,7 @@ FIRESTORE_EMULATOR_HOST=localhost:8080 npm run dev
 
 ## アーキテクチャ
 
-- **利用者は作成者本人のみ** — 認証なし、Cloud Run の IAM レベルで本人のみアクセス可能にする運用
+- **利用者は作成者本人のみ** — Cloud Run に IAP (Identity-Aware Proxy) を直接有効化し、Google ログイン経由でアクセス。許可ユーザーは `roles/iap.httpsResourceAccessor` で制御
 - **ストレージ: Firestore**（Spark プラン無料枠内、Cloud Run と同じ GCP プロジェクト）
 - **Word Wrangler 本体との API 連携は Phase 2 で別ワークストリーム**
 
@@ -75,8 +75,10 @@ Google Cloud Run（asia-northeast1）に GitHub Actions で自動デプロイ。
 - イメージ: `wordbook/Dockerfile`（client と同型、Next.js standalone）→ Artifact Registry `asia-northeast1-docker.pkg.dev/<project>/word-wrangler/word-wrangler-wordbook:<sha>`
 - Cloud Run サービス: `word-wrangler-wordbook`、port 3001
 - **Runtime SA は専用**: `cloud-run-wordbook-runtime@<project>.iam.gserviceaccount.com`（client 用 SA とは分離、`roles/datastore.user` のみ付与）
-- 非公開（`roles/run.invoker` を本人のみ）
-- ブラウザ確認は `gcloud run services proxy word-wrangler-wordbook --region=asia-northeast1` 経由
+- アクセス制御: IAP を Cloud Run に直接有効化（`gcloud run services update word-wrangler-wordbook --iap`）。`roles/run.invoker` は IAP サービスエージェント (`service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com`) のみに付与
+- 許可ユーザーには `roles/iap.httpsResourceAccessor` を付与（`gcloud iap web add-iam-policy-binding --resource-type=cloud-run --service=word-wrangler-wordbook`）
+- ブラウザ確認は `https://word-wrangler-wordbook-<hash>.asia-northeast1.run.app` に直アクセス → Google ログイン
+- IAP の OAuth client は project レベルで custom client を設定済み（個人 Gmail を許可するため、`docs.cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run#custom-oauth-client` 参照）
 
 GCP 側の構成・運用コマンドは `.steering/2026-05-23/wordbook-service-mvp/tasks.md` の PR-4 セクションを参照。
 
