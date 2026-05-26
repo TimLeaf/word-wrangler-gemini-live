@@ -33,5 +33,5 @@ Daily ルーム
 ## デプロイ
 
 - サーバ：Pipecat Cloud（`server/CLAUDE.md` 参照）
-- クライアント：Google Cloud Run / `asia-northeast1`（`client/CLAUDE.md` 参照）
+- クライアント：Google Cloud Run / `asia-northeast1`、IAP 保護（`client/CLAUDE.md` 参照）
 - Wordbook：Google Cloud Run / `asia-northeast1`、IAP 保護（`wordbook/CLAUDE.md` 参照）
