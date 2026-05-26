@@ -1,17 +1,20 @@
 # カスタム単語帳サービス
 
 作成日: 2026-05-18
-最終更新: 2026-05-23（Phase 1 MVP 完了）
+最終更新: 2026-05-26（Phase 2a: IAP 移行完了）
 slug: wordbook-service
 関連: [`2026-05-18-i18n-japanese.md`](./2026-05-18-i18n-japanese.md), [`2026-05-04-quality-foundation.md`](./2026-05-04-quality-foundation.md)
 
-## 進捗サマリ（2026-05-23 時点）
+## 進捗サマリ（2026-05-26 時点）
 
 - ✅ **Phase 1 MVP**: `wordbook/` を Cloud Run（`asia-northeast1`、非公開）に配備。自分専用・認証なし・ja/en 両対応・Firestore（database `wordbook`）。詳細は `.steering/2026-05-23/wordbook-service-mvp/`
   - PR #51 scaffolding / #52 Firestore + Wordbook CRUD（Server Actions）/ #53 単語 CRUD + デフォルト単語帳機能 / #54 Cloud Run デプロイ / #55 Server Actions proxy CSRF fix
   - 単語帳 CRUD、単語 CRUD、★ デフォルト単語帳機能、`/` がデフォルトへの誘導
-- ⏳ **Phase 2**: Word Wrangler 本体との API 連携 + `usageCount` 増分（未着手、必要になったタイミングで steering 起こす）
-- ⏸️ **Phase 3**: 共有・公開・複数ユーザー対応（保留）
+- ✅ **Phase 2a IAP 移行**: `word-wrangler-client` + `word-wrangler-wordbook` を Cloud Run 直接 IAP で保護。`*.run.app` への直アクセス + Google ログイン運用に切り替え。詳細は `.steering/2026-05-25/wordbook-iap-migration/`
+  - PR #57 wordbook IAP + Server Actions allowedOrigins 撤去 / PR #58 client IAP + docs 更新
+  - Custom OAuth client + 組織ポリシー `iam.allowedPolicyMemberDomains` Allow All で個人 Gmail を許可
+- ⏳ **Phase 2b**: Word Wrangler 本体との API 連携 + `usageCount` 増分（`wordbook-api` を別 Cloud Run で新設、`packages/wordbook-core/` でロジック共有予定）。次着手時に `.steering/{date}/wordbook-api-integration/` を起こす
+- ⏸️ **Phase 3**: 共有・公開・複数ユーザー対応（保留。Phase 2a の IAP 基盤上で対応可能）
 
 ## プロダクトビジョン
 
@@ -116,8 +119,9 @@ slug: wordbook-service
 
 1. ✅ **Phase 0**: idea A（多言語）で `language` 概念を client に導入（完了済み）
 2. ✅ **Phase 1**: 単語帳 MVP（自分専用、認証なし、Cloud Run + Firestore）。Word Wrangler は引き続きハードコードリストを使う（2026-05-23 完了）
-3. ⏳ **Phase 2**: Word Wrangler と API 連携。設定で単語帳選択可能に、`usageCount` 増分
-4. ⏸️ **Phase 3**: 共有・公開機能、複数ユーザー対応（個人プロジェクトとして優先度低、保留判断）
+3. ✅ **Phase 2a**: client + wordbook を IAP 化（`*.run.app` 直アクセス + Google ログイン）。proxy 不要、スマホからも使える状態に（2026-05-26 完了）
+4. ⏳ **Phase 2b**: Word Wrangler と API 連携。`wordbook-api` を別 Cloud Run で新設、`packages/wordbook-core/` でロジック共有、`usageCount` 増分
+5. ⏸️ **Phase 3**: 共有・公開機能、複数ユーザー対応（個人プロジェクトとして優先度低、保留判断。IAP 基盤上で実装可能）
 
 ## Phase 1 確定事項（実装後の反映）
 
@@ -130,9 +134,19 @@ slug: wordbook-service
   - `wordbooks/{id}/words/{wordId}` サブコレクション: `text` / `createdAt` / `usageCount` (default 0)
 - **デフォルト単語帳**: `/` を開いたらデフォルトの詳細にリダイレクト、未設定時は `/wordbooks` 一覧へ
 
-## Phase 2 に向けたメモ
+## Phase 2a 確定事項（実装後の反映）
 
-- API 契約: `GET /api/wordbooks/{id}/words?orderBy=usageCount&limit=30` を Word Wrangler の Next.js Route Handler 経由で叩く想定
-- 認証: 同じ GCP プロジェクト内なので、Cloud Run 間の service-to-service 認証（identity token）で OK
-- `usageCount` 増分: ゲーム終了時に `FieldValue.increment(1)` を該当 word doc に対して発行
-- 着手時に `.steering/{date}/wordbook-phase2-integration/` を起こす
+- **アクセス制御**: Cloud Run 直接 IAP（HTTPS Load Balancer 不使用、追加コストなし）。client / wordbook どちらも `*.run.app` に Google ログインで直アクセス
+- **OAuth**: Custom OAuth client を project レベルに設定（個人 Gmail 許可のため、Google-managed client では非対応）
+- **組織ポリシー**: `constraints/iam.allowedPolicyMemberDomains` を組織レベルで Allow All（組織外 Google アカウントへの IAM 付与を許可するため）
+- **IAM**: IAP サービスエージェント (`service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com`) に `roles/run.invoker`、許可ユーザーに `roles/iap.httpsResourceAccessor`
+
+## Phase 2b に向けたメモ
+
+- **構成**: server（Pipecat Cloud）からは `wordbook-api` を別 Cloud Run（IAP なし、素の private + service-to-service ID token）として新設して叩く。IAP 配下の wordbook を直接叩こうとすると audience が IAP OAuth client ID になり手順が複雑なため
+- **コード共有**: `packages/wordbook-core/` を npm workspaces で新設し、Firestore ロジック (`wordbooks.ts` / `words.ts` / `validation.ts`) を wordbook と wordbook-api で共有
+- **API 契約**: `GET /api/active/words?limit=N`（アクティブ単語帳 = ★ デフォルトの単語を `usageCount` ASC で返す）+ `POST /api/active/words/increment`（body `{ ids: string[] }` を batch increment）
+- **認証**: server SA → wordbook-api の Cloud Run service-to-service 認証（identity token、audience = wordbook-api URL）
+- **`usageCount` 増分**: server が出題 word の id を保持してゲーム終了時に POST。失敗してもゲームは止めない fire-and-forget
+- **リスク**: Pipecat Cloud のランタイムから Google ID token を取得できるか要検証（PSK 方式へのフォールバック検討含む）
+- 着手時に `.steering/{date}/wordbook-api-integration/` を起こす
