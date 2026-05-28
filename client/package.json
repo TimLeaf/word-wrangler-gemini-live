@@ -21,6 +21,7 @@
     "@tailwindcss/postcss": "^4.3.0",
     "jotai": "^2.20.0",
     "js-confetti": "^0.13.1",
+    "@google-cloud/firestore": "^8.6.0",
     "next": "^16.2.6",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
