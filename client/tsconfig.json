@@ -44,6 +44,12 @@
       ],
       "@/hooks/*": [
         "./src/hooks/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/app/*": [
+        "./src/app/*"
       ]
     },
     "plugins": [
