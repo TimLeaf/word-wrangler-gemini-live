@@ -80,11 +80,6 @@ export const WordWrangler: React.FC<{
     onIncorrectGuess: handleIncorrectGuess,
   });
 
-  // Initialize on component mount
-  useEffect(() => {
-    gameState.initializeGame();
-  }, []);
-
   // Handle connection state changes
   useEffect(() => {
     if (isConnected) {

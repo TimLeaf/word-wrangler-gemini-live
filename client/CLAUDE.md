@@ -37,7 +37,7 @@ IDLE → CONNECTING → WAITING_FOR_INTRO → ACTIVE → FINISHED
 ```
 
 - `WAITING_FOR_INTRO → ACTIVE` の遷移は **`RTVIEvent.BotStoppedSpeaking` の初回発火** で起こる（`src/components/Game/WordWrangler.tsx`）。これはサーバ側の `MuteUntilFirstBotCompleteUserMuteStrategy`（`server/bot.py` の `user_aggregator` 内に統合）と対になっており、ボットの挨拶が終わったタイミングでゲームタイマーを開始する
-- ゲーム時間は 60 秒、最大スキップ回数は 3、単語プールは 30 語ずつ補充（`src/constants/gameConstants.ts` の `GAME_CONFIG`）
+- ゲーム時間は 300 秒（5 分）、最大スキップ回数は 3、単語プールは 30 語ずつ補充（`src/constants/gameConstants.ts` の `GAME_CONFIG`）
 - ベストスコアは `localStorage.bestScore` に永続化
 
 ### 単語推測の検出（`src/utils/wordDetection.ts`）
