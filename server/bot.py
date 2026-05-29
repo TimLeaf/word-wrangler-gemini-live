@@ -59,7 +59,7 @@ GAME RULES:
 2. The user CANNOT say any part of the word/phrase directly
 3. You must try to guess the word/phrase based on the user's description
 4. Once you guess correctly, the user will move on to their next word
-5. The user is trying to get through as many words as possible in 60 seconds
+5. The user is trying to get through as many words as possible in 5 minutes
 6. The external application will handle timing and keeping score
 
 YOUR ROLE:
@@ -88,7 +88,7 @@ Start with the exact introduction specified above, then wait for the user to beg
 2. ユーザーはその単語やフレーズの一部を直接言うことはできません
 3. あなたはユーザーの説明から単語やフレーズを推測してください
 4. 正しく推測できたら、ユーザーは次の単語に進みます
-5. ユーザーは 60 秒間でできるだけ多くの単語をクリアしようとします
+5. ユーザーは 5 分間でできるだけ多くの単語をクリアしようとします
 6. タイマーとスコアは外部アプリケーションが管理します
 
 あなたの役割:

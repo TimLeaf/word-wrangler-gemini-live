@@ -3,7 +3,7 @@ import { Language } from "@/types/language";
 // Game configuration
 export const GAME_CONFIG = {
   MAX_SKIPS: 3,
-  GAME_DURATION: 60, // seconds
+  GAME_DURATION: 300, // seconds (5 分)
   WORD_POOL_SIZE: 30,
   ANIMATION_DURATION: 1000, // ms
   TIMER_INTERVAL: 1000, // ms
@@ -57,11 +57,11 @@ export const GAME_TEXT_BY_LANG: Record<Language, GameTextDict> = {
     skip: "Skip →",
     noSkips: "No Skips Left",
     skipsRemaining: (num: number) => `Skip (${num} left)`,
-    startingGame: `How many words can you describe in ${GAME_CONFIG.GAME_DURATION} seconds?`,
+    startingGame: `How many words can you describe in ${GAME_CONFIG.GAME_DURATION / 60} minutes?`,
     waitingForIntro: "Getting ready...",
     clickToStart: "Press Start Game to begin",
     describeWord: "Describe the following word:",
-    introTitle: "How many words can you describe within 60 seconds?",
+    introTitle: `How many words can you describe within ${GAME_CONFIG.GAME_DURATION / 60} minutes?`,
     introGuide1: "Earn points each time the AI correctly guesses the word",
     introGuide2: "Do not say the word, or you will lose points",
     introGuide3: "You can skip the word if you don't know it",
@@ -80,11 +80,11 @@ export const GAME_TEXT_BY_LANG: Record<Language, GameTextDict> = {
     skip: "スキップ →",
     noSkips: "スキップ残り 0",
     skipsRemaining: (num: number) => `スキップ（残り ${num}）`,
-    startingGame: `${GAME_CONFIG.GAME_DURATION} 秒間でいくつ説明できるかな？`,
+    startingGame: `${GAME_CONFIG.GAME_DURATION / 60} 分間でいくつ説明できるかな？`,
     waitingForIntro: "準備中...",
     clickToStart: "「ゲーム開始」を押して始めましょう",
     describeWord: "次の単語を説明してください:",
-    introTitle: "60 秒間でいくつの単語を説明できますか？",
+    introTitle: `${GAME_CONFIG.GAME_DURATION / 60} 分間でいくつの単語を説明できますか？`,
     introGuide1: "AI が単語を正しく当てるたびに得点します",
     introGuide2: "単語そのものを言うと減点されます",
     introGuide3: "分からなければスキップできます",
