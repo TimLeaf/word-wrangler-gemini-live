@@ -134,9 +134,9 @@ export const WordWrangler: React.FC<{
   }
 
   // Start the game
-  function startGame() {
-    // Initialize game state
-    gameState.initializeGame();
+  async function startGame() {
+    // Initialize game state（単語取得を待ってからタイマーを開始する）
+    await gameState.initializeGame();
     wordDetection.resetLastProcessedMessage();
 
     // Start the timer - now it internally manages countdown and calls endGame when done

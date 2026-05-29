@@ -35,6 +35,20 @@ export async function listWords(wordbookId: string): Promise<Word[]> {
   return snapshot.docs.map((doc) => toWord(doc.id, doc.data()));
 }
 
+// ゲーム出題用。correctCount 昇順（AI が当てた回数が少ない語を優先）で limit 件返す。
+// Firestore の orderBy はフィールド未保有のドキュメントを除外してしまい、レガシーの
+// usageCount だけ持つ語が落ちるため、全件取得してメモリ上でソートする。
+// （単語帳は手動キュレーションで件数が小さい前提）
+export async function listWordsForGame(
+  wordbookId: string,
+  limit: number,
+): Promise<Word[]> {
+  const snapshot = await wordsRef(wordbookId).get();
+  const words = snapshot.docs.map((doc) => toWord(doc.id, doc.data()));
+  words.sort((a, b) => a.correctCount - b.correctCount);
+  return words.slice(0, limit);
+}
+
 export async function addWord(
   wordbookId: string,
   text: string,
