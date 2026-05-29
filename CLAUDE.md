@@ -6,9 +6,9 @@ Word Wrangler は Pipecat と Google Gemini Live API を活用した、音声ベ
 
 ## リポジトリ構成
 
-- `client/` — Next.js 15 / React 19 のフロントエンド。詳細は `client/CLAUDE.md`
+- `client/` — Next.js 15 / React 19 のフロントエンド。ゲーム本体に加え、単語帳管理 UI（`/wordbooks`）と単語供給 API（`/api/words`）を持つ。詳細は `client/CLAUDE.md`
 - `server/` — Pipecat ベースの Python ボット。詳細は `server/CLAUDE.md`
-- `wordbook/` — カスタム単語帳サービス（Next.js 15 / React 19、Cloud Run + Firestore）。詳細は `wordbook/CLAUDE.md`。Word Wrangler 本体とは独立した別アプリで、Phase 1 MVP は連携なし
+- `wordbook/` — カスタム単語帳サービス（Next.js 15 / React 19、Cloud Run + Firestore）。詳細は `wordbook/CLAUDE.md`。**Phase 2b（案 Z）で `client` に吸収中**: データ層・管理 UI・単語供給は `client` に移植済み（PR #60 / #62）、ゲームは `client/src/lib/wordbook/*` 経由で Firestore（database `wordbook`）を直読みする。standalone の `wordbook/` サービスは PR-4 で撤去予定。経緯は `docs/ideas/2026-05-18-wordbook-service.md`
 
 それぞれのディレクトリにある `CLAUDE.md` に、コマンド・環境変数・アーキテクチャの詳細を記載している。作業対象のディレクトリ側を参照すること。
 
@@ -28,7 +28,7 @@ Daily ルーム
 
 - **`runner_args.body` のプロトコル整合性**：ペルソナリティ追加など body の構造を変える場合、クライアント側 `client/src/app/api/start/route.ts` のリクエストボディと、サーバ側 `server/bot.py` の `config.get(...)` の両方を一致させること
 - **ゲーム開始トリガーの保持**：クライアントはサーバの初回挨拶が終わったタイミング（`RTVIEvent.BotStoppedSpeaking` の初回発火）でゲームタイマーを開始する。`server/bot.py` の `game_prompt` 冒頭にある固定挨拶（`Welcome to Word Wrangler!...`）を変更する場合も、「最初に一度ボットが発話を終える」フローを必ず保つこと
-- **テストフレームワーク未設定**：このリポジトリにはテストコマンドが存在しない
+- **テスト**：client は Vitest（`client/` で `npm test`）、server は pytest（`server/` で `uv run pytest`）。両者で INV-1〜4（`docs/invariants.md`）を保護している
 
 ## デプロイ
 
