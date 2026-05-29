@@ -65,6 +65,29 @@ export async function addWord(
   return ref.id;
 }
 
+// AI が正解した単語の correctCount を増分する（PR-3）。
+// 同じ単語が 1 ゲーム内で複数回出題され得るため、id ごとに出現回数を集約してから
+// increment(n) する（同一 doc を 1 つの batch で二重 update できない制約の回避も兼ねる）。
+export async function incrementCorrectCounts(
+  wordbookId: string,
+  ids: string[],
+): Promise<void> {
+  const counts = new Map<string, number>();
+  for (const id of ids) {
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  if (counts.size === 0) {
+    return;
+  }
+  const db = getFirestore();
+  const ref = wordsRef(wordbookId);
+  const batch = db.batch();
+  for (const [id, n] of counts) {
+    batch.update(ref.doc(id), { correctCount: FieldValue.increment(n) });
+  }
+  await batch.commit();
+}
+
 export async function updateWordText(
   wordbookId: string,
   wordId: string,
