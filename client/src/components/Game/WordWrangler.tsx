@@ -22,6 +22,9 @@ export const WordWrangler: React.FC<{
   onGameEnded: (score: number, bestScore: number) => void;
 }> = ({ onGameEnded }) => {
   const currentScoreRef = useRef(0);
+  // AI が正解した単語の id を貯める（フォールバック由来の null は除外）。
+  // ゲーム終了時に /api/words/increment へ送って correctCount を増分する。
+  const correctWordIdsRef = useRef<string[]>([]);
   const { language } = useConfigurationSettings();
   const { gameText } = useTexts();
   const gameState = useGameState({ language });
@@ -50,6 +53,17 @@ export const WordWrangler: React.FC<{
     // Update game state
     gameState.finishGame();
     visualFeedback.resetVisuals();
+
+    // 正解した単語の correctCount を増分（fire-and-forget、失敗してもゲームは止めない）
+    const guessedIds = correctWordIdsRef.current;
+    correctWordIdsRef.current = [];
+    if (guessedIds.length > 0) {
+      void fetch("/api/words/increment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: guessedIds }),
+      }).catch(() => {});
+    }
 
     // Update best score if needed
     if (currentBestScore < finalScore) {
@@ -114,6 +128,8 @@ export const WordWrangler: React.FC<{
 
   // Handle correct guess with animation
   function handleCorrectGuess() {
+    const guessedId = gameState.currentWordId;
+    if (guessedId) correctWordIdsRef.current.push(guessedId);
     visualFeedback.showCorrect(() => {
       gameState.incrementScore();
       gameState.moveToNextWord();
@@ -130,6 +146,7 @@ export const WordWrangler: React.FC<{
 
   // Start the game
   async function startGame() {
+    correctWordIdsRef.current = [];
     // Initialize game state（単語取得を待ってからタイマーを開始する）
     await gameState.initializeGame();
     wordDetection.resetLastProcessedMessage();
@@ -141,6 +158,9 @@ export const WordWrangler: React.FC<{
   // Handle manual marking as correct
   function handleManualCorrect() {
     if (gameState.gameState !== GAME_STATES.ACTIVE) return;
+
+    const guessedId = gameState.currentWordId;
+    if (guessedId) correctWordIdsRef.current.push(guessedId);
 
     gameState.incrementScore();
 
