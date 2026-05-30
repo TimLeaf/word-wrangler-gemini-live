@@ -1,11 +1,11 @@
 # カスタム単語帳サービス
 
 作成日: 2026-05-18
-最終更新: 2026-05-29（Phase 2b: 案 Z で client 吸収中、PR-1/PR-2 マージ）
+最終更新: 2026-05-30（Phase 2b: 案 Z 完了 — client 吸収済み、standalone 撤去）
 slug: wordbook-service
 関連: [`2026-05-18-i18n-japanese.md`](./2026-05-18-i18n-japanese.md), [`2026-05-04-quality-foundation.md`](./2026-05-04-quality-foundation.md)
 
-## 進捗サマリ（2026-05-29 時点）
+## 進捗サマリ（2026-05-30 時点）
 
 - ✅ **Phase 1 MVP**: `wordbook/` を Cloud Run（`asia-northeast1`、非公開）に配備。自分専用・認証なし・ja/en 両対応・Firestore（database `wordbook`）。詳細は `.steering/2026-05-23/wordbook-service-mvp/`
   - PR #51 scaffolding / #52 Firestore + Wordbook CRUD（Server Actions）/ #53 単語 CRUD + デフォルト単語帳機能 / #54 Cloud Run デプロイ / #55 Server Actions proxy CSRF fix
@@ -13,11 +13,12 @@ slug: wordbook-service
 - ✅ **Phase 2a IAP 移行**: `word-wrangler-client` + `word-wrangler-wordbook` を Cloud Run 直接 IAP で保護。`*.run.app` への直アクセス + Google ログイン運用に切り替え。詳細は `.steering/2026-05-25/wordbook-iap-migration/`
   - PR #57 wordbook IAP + Server Actions allowedOrigins 撤去 / PR #58 client IAP + docs 更新
   - Custom OAuth client + 組織ポリシー `iam.allowedPolicyMemberDomains` Allow All で個人 Gmail を許可
-- ⏳ **Phase 2b（案 Z: client へ完全吸収）**: 当初の「`wordbook-api` を別 Cloud Run で新設」案は破棄し、**単語帳機能を `client` に取り込み 1 サービスに集約**する方針に変更。client の Route Handler / Server Actions が Firestore を直読みするため、`wordbook-api`・service-to-service token・CORS は不要。詳細は `.steering/2026-05-28/wordbook-client-merge/`
+- ✅ **Phase 2b（案 Z: client へ完全吸収）**: 当初の「`wordbook-api` を別 Cloud Run で新設」案は破棄し、**単語帳機能を `client` に取り込み 1 サービスに集約**。client の Route Handler / Server Actions が Firestore を直読み・直書きするため、`wordbook-api`・service-to-service token・CORS は不要になった。詳細は `.steering/2026-05-28/wordbook-client-merge/`
   - ✅ PR-1（#60）: データ層（`lib/wordbook/*`）+ 単語帳管理 UI（`/wordbooks`）を client に移植。`usageCount` → `correctCount` 改名
   - ✅ PR-2（#62）: `GET /api/words` 追加（アクティブ＝★デフォルト帳の単語を `correctCount` 昇順・上限 30 で返却）+ `useGameState` を Firestore 連携に差し替え（未設定/空/エラー時は組み込み単語へフォールバック）
-  - ⏳ PR-3: `POST /api/words/increment`（AI 正解語の `correctCount` を batch 増分、fire-and-forget）
-  - ⏳ PR-4: standalone `wordbook/` 撤去（Cloud Run サービス・workflow・CI job・`wordbook/CLAUDE.md`・関連 IAM/Secret）
+  - ✅ docs 整理（#64）: invariants/CLAUDE.md ドリフト修正、idea doc を案 Z に最新化
+  - ✅ PR-3（#65）: `POST /api/words/increment`（AI 正解語の `correctCount` を集約 batch で増分、fire-and-forget）
+  - ✅ PR-4: standalone `wordbook/` ディレクトリ・`deploy-wordbook.yml`・CI `wordbook` job・Branch Protection の required check `Wordbook (Next.js)`・Cloud Run サービス `word-wrangler-wordbook`・関連 IAM/Secret を撤去
 - ⏸️ **Phase 3**: 共有・公開・複数ユーザー対応（保留。Phase 2a の IAP 基盤上で対応可能）
 
 > **なぜ案 Z（wordbook-api 案からの方針転換）**: server（Pipecat Cloud）から単語帳を叩く構成では service-to-service 認証や別 Cloud Run の運用負担が増える。実際には単語供給・増分はすべて **client が担えば足りる**（ゲーム単語の取得も正解時の増分もブラウザ↔client 間で完結）。1 サービスに集約することで `wordbook-api` / `packages/wordbook-core/` / CORS / token 検証がまるごと不要になる。
@@ -126,7 +127,7 @@ slug: wordbook-service
 1. ✅ **Phase 0**: idea A（多言語）で `language` 概念を client に導入（完了済み）
 2. ✅ **Phase 1**: 単語帳 MVP（自分専用、認証なし、Cloud Run + Firestore）。Word Wrangler は引き続きハードコードリストを使う（2026-05-23 完了）
 3. ✅ **Phase 2a**: client + wordbook を IAP 化（`*.run.app` 直アクセス + Google ログイン）。proxy 不要、スマホからも使える状態に（2026-05-26 完了）
-4. ⏳ **Phase 2b（案 Z）**: 単語帳機能を `client` に吸収し 1 サービス化。client Route Handler が Firestore を直読み・直書き。PR-1/PR-2 マージ済み、PR-3（`correctCount` 増分）/ PR-4（standalone 撤去）が残
+4. ✅ **Phase 2b（案 Z）**: 単語帳機能を `client` に吸収し 1 サービス化。client Route Handler が Firestore を直読み・直書き。PR-1〜4 マージで完了（2026-05-30）
 5. ⏸️ **Phase 3**: 共有・公開機能、複数ユーザー対応（個人プロジェクトとして優先度低、保留判断。IAP 基盤上で実装可能）
 
 ## Phase 1 確定事項（実装後の反映）
