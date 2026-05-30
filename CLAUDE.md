@@ -6,9 +6,10 @@ Word Wrangler は Pipecat と Google Gemini Live API を活用した、音声ベ
 
 ## リポジトリ構成
 
-- `client/` — Next.js 15 / React 19 のフロントエンド。ゲーム本体に加え、単語帳管理 UI（`/wordbooks`）と単語供給 API（`/api/words`）を持つ。詳細は `client/CLAUDE.md`
+- `client/` — Next.js 15 / React 19 のフロントエンド。ゲーム本体に加え、**単語帳管理 UI（`/wordbooks`）と単語供給/正解増分 API（`/api/words`, `/api/words/increment`）** を持つ。`client/src/lib/wordbook/*` 経由で Firestore（database `wordbook`）を直読み・直書き。詳細は `client/CLAUDE.md`
 - `server/` — Pipecat ベースの Python ボット。詳細は `server/CLAUDE.md`
-- `wordbook/` — カスタム単語帳サービス（Next.js 15 / React 19、Cloud Run + Firestore）。詳細は `wordbook/CLAUDE.md`。**Phase 2b（案 Z）で `client` に吸収中**: データ層・管理 UI・単語供給は `client` に移植済み（PR #60 / #62）、ゲームは `client/src/lib/wordbook/*` 経由で Firestore（database `wordbook`）を直読みする。standalone の `wordbook/` サービスは PR-4 で撤去予定。経緯は `docs/ideas/2026-05-18-wordbook-service.md`
+
+> 旧 `wordbook/`（standalone Cloud Run サービス）は Phase 2b（案 Z）で `client` に完全吸収し、PR-4 で撤去済み。経緯は `docs/ideas/2026-05-18-wordbook-service.md`
 
 それぞれのディレクトリにある `CLAUDE.md` に、コマンド・環境変数・アーキテクチャの詳細を記載している。作業対象のディレクトリ側を参照すること。
 
@@ -34,4 +35,3 @@ Daily ルーム
 
 - サーバ：Pipecat Cloud（`server/CLAUDE.md` 参照）
 - クライアント：Google Cloud Run / `asia-northeast1`、IAP 保護（`client/CLAUDE.md` 参照）
-- Wordbook：Google Cloud Run / `asia-northeast1`、IAP 保護（`wordbook/CLAUDE.md` 参照）
