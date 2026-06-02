@@ -19,7 +19,7 @@ slug: quality-foundation
 - ✅ **デプロイ後ヘルスチェック**（2026-05-23, PR #47）：`deploy-server.yml` で `pcc agent status` の Active Deployment ID 前後比較 + `Ready` 検証
 - ✅ **Renovate 導入**（2026-05-22）：週次（金曜 9am JST）で minor/patch を自動 PR、major は別ラベル運用。既知不具合の pin ルール込み（`@pipecat-ai/client-react <1.5.0` / `eslint <10`）
 - ✅ **パイプライン統合テスト**（2026-05-23, PR #49）：`pipecat.tests.utils.run_test` で `user_aggregator → MockLLM → assistant_aggregator` の 3 段を組み立て、frame 契約と `LLMContext` 追記を assert。pytest-asyncio 導入
-- ⏸️ **保留**：E2E スモーク（実 Daily ルーム利用料が発生、個人プロジェクトとしては優先度低と判断）
+- ❌ **見送り（スコープ外）**：E2E スモーク（実 Daily ルーム利用料が発生、個人プロジェクトとしては費用対効果が薄く実施しない方針、2026-05-31 確定）
 
 ## プロダクトビジョン
 
@@ -45,10 +45,9 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
   - `server/tests/test_pipeline_integration.py` に 2 ケース（`LLMRunFrame` → assistant message 追加 / `TranscriptionFrame` → user message 追加）
   - Gemini Live はモック化（応答内容ではなく「呼ばれ方」を assert）
   - Finding: 実 LLM サービスが受け取るのは `LLMRunFrame` ではなく `LLMContextFrame`（aggregator が変換）。ライブラリ更新時に守るべき契約として明示化
-- **E2E スモーク（低頻度・高シグナル）** ⏸️ 保留
-  - 実 Daily ルームを立てて 1 ターン回す
-  - PR ごとではなく nightly または手動トリガーで実行
-  - 個人プロジェクトとしては Daily 利用料の費用対効果が薄く、当面は実装しない判断（必要性が出たら別ワークストリームで起動）
+- **E2E スモーク（低頻度・高シグナル）** ❌ 見送り（スコープ外、2026-05-31 確定）
+  - 実 Daily ルームを立てて 1 ターン回す案
+  - 個人プロジェクトとしては Daily 利用料の費用対効果が薄いため実施しない方針。必要性が出た時点で別ワークストリームとして再起動
 - **PR CI** ✅ 完了
   - server: `ruff` / `ty` / `pytest` 稼働中
   - client: `eslint` / `vitest` / `next build` 稼働中。専用 `tsc` ステップは未追加（`next build` で型チェックは走る）
@@ -99,8 +98,8 @@ Word Wrangler が機能追加・ライブラリ更新・リファクタを経て
 
 - ✅ Renovate 導入と運用ルール策定（2026-05-22）
 - ✅ パイプライン統合テスト（2026-05-23, PR #49）— ライブラリ更新時の frame 契約検証手段として CI に組み込み済み
-- ⏸️ E2E スモークは費用対効果が薄く保留判断
+- ❌ E2E スモークは費用対効果が薄く見送り（スコープ外、2026-05-31 確定）
 
 ## ステータス（2026-05-23）
 
-idea C の当初スコープ + ライブラリ更新スコープは E2E スモーク（保留判断）を除いて完了。今後は新規 idea 着手時に発見した穴（例: 新 frame タイプ、新フロー）を都度 UT/統合テストに反映していく運用へ。
+idea C の当初スコープ + ライブラリ更新スコープは E2E スモーク（見送り判断）を除いて完了。今後は新規 idea 着手時に発見した穴（例: 新 frame タイプ、新フロー）を都度 UT/統合テストに反映していく運用へ。

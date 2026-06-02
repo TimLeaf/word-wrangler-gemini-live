@@ -19,7 +19,7 @@ slug: wordbook-service
   - ✅ docs 整理（#64）: invariants/CLAUDE.md ドリフト修正、idea doc を案 Z に最新化
   - ✅ PR-3（#65）: `POST /api/words/increment`（AI 正解語の `correctCount` を集約 batch で増分、fire-and-forget）
   - ✅ PR-4: standalone `wordbook/` ディレクトリ・`deploy-wordbook.yml`・CI `wordbook` job・Branch Protection の required check `Wordbook (Next.js)`・Cloud Run サービス `word-wrangler-wordbook`・関連 IAM/Secret を撤去
-- ⏸️ **Phase 3**: 共有・公開・複数ユーザー対応（保留。Phase 2a の IAP 基盤上で対応可能）
+- ❌ **Phase 3**: 共有・公開・複数ユーザー対応 — **見送り（スコープ外）**。個人プロジェクトとして実施しない方針（2026-05-31 確定）。再開する場合は Phase 2a の IAP 基盤上で実装可能
 
 > **なぜ案 Z（wordbook-api 案からの方針転換）**: server（Pipecat Cloud）から単語帳を叩く構成では service-to-service 認証や別 Cloud Run の運用負担が増える。実際には単語供給・増分はすべて **client が担えば足りる**（ゲーム単語の取得も正解時の増分もブラウザ↔client 間で完結）。1 サービスに集約することで `wordbook-api` / `packages/wordbook-core/` / CORS / token 検証がまるごと不要になる。
 
@@ -128,7 +128,7 @@ slug: wordbook-service
 2. ✅ **Phase 1**: 単語帳 MVP（自分専用、認証なし、Cloud Run + Firestore）。Word Wrangler は引き続きハードコードリストを使う（2026-05-23 完了）
 3. ✅ **Phase 2a**: client + wordbook を IAP 化（`*.run.app` 直アクセス + Google ログイン）。proxy 不要、スマホからも使える状態に（2026-05-26 完了）
 4. ✅ **Phase 2b（案 Z）**: 単語帳機能を `client` に吸収し 1 サービス化。client Route Handler が Firestore を直読み・直書き。PR-1〜4 マージで完了（2026-05-30）
-5. ⏸️ **Phase 3**: 共有・公開機能、複数ユーザー対応（個人プロジェクトとして優先度低、保留判断。IAP 基盤上で実装可能）
+5. ❌ **Phase 3**: 共有・公開機能、複数ユーザー対応 — **見送り（スコープ外）**。個人プロジェクトとして実施しない方針（2026-05-31 確定）
 
 ## Phase 1 確定事項（実装後の反映）
 
