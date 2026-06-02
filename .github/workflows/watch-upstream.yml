@@ -2,7 +2,7 @@ name: Watch Upstream word-wrangler-gemini-live
 
 on:
   schedule:
-    - cron: '0 9 * * 1'  # 每周一 UTC 09:00 自动检查
+    - cron: '0 1 * * 5'  # 每周五 01:00 UTC = 10:00 JST 自动检查
   workflow_dispatch:       # 支持手动触发
 
 jobs:
@@ -104,14 +104,21 @@ jobs:
       - name: Create GitHub Issue
         if: steps.diff.outputs.changed == 'true'
         uses: actions/github-script@v9
+        env:
+          LAST_HASH: ${{ steps.last.outputs.hash }}
+          LATEST_HASH: ${{ steps.upstream.outputs.hash }}
+          COMMIT_MSG: ${{ steps.upstream.outputs.message }}
+          COMMIT_DATE: ${{ steps.upstream.outputs.date }}
+          COMMIT_AUTHOR: ${{ steps.upstream.outputs.author }}
+          FILES_LIST: ${{ steps.files.outputs.list }}
         with:
           script: |
-            const last   = `${{ steps.last.outputs.hash }}`;
-            const latest = `${{ steps.upstream.outputs.hash }}`;
-            const msg    = `${{ steps.upstream.outputs.message }}`.replace(/%0A/g, '\n');
-            const date   = `${{ steps.upstream.outputs.date }}`;
-            const author = `${{ steps.upstream.outputs.author }}`;
-            const files  = `${{ steps.files.outputs.list }}`.replace(/%0A/g, '\n');
+            const last   = process.env.LAST_HASH;
+            const latest = process.env.LATEST_HASH;
+            const msg    = process.env.COMMIT_MSG.replace(/%0A/g, '\n');
+            const date   = process.env.COMMIT_DATE;
+            const author = process.env.COMMIT_AUTHOR;
+            const files  = process.env.FILES_LIST.replace(/%0A/g, '\n');
 
             const compareUrl = last
               ? `https://github.com/pipecat-ai/pipecat-examples/compare/${last}...${latest}`
