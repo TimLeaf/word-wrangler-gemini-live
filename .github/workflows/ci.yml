@@ -79,7 +79,7 @@ jobs:
 
       - name: Setup uv
         if: steps.changes.outputs.server == 'true'
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           enable-cache: true
           cache-dependency-glob: server/uv.lock
