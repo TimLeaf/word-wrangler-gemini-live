@@ -43,14 +43,14 @@ jobs:
         id: pre
         run: |
           set -euo pipefail
-          output=$(uv run pcc agent status word-wrangler 2>&1 || true)
+          output=$(uv run pc cloud agent status word-wrangler 2>&1 || true)
           echo "$output"
           prev_id=$(echo "$output" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -n1 || true)
           echo "prev_id=$prev_id" >> "$GITHUB_OUTPUT"
           echo "Previous active deployment ID: ${prev_id:-<none>}"
 
       - name: Deploy to Pipecat Cloud
-        run: uv run pcc deploy --yes
+        run: uv run pc cloud deploy --yes
 
       - name: Verify deploy rolled out
         env:
@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           sleep 10
-          output=$(uv run pcc agent status word-wrangler 2>&1)
+          output=$(uv run pc cloud agent status word-wrangler 2>&1)
           echo "$output"
           new_id=$(echo "$output" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -n1 || true)
           echo "New active deployment ID: ${new_id:-<none>}"
