@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout your repo
@@ -160,14 +161,25 @@ jobs:
               labels: ['upstream-update'],
             });
 
-      # ── 保存最新 hash，供下次对比 ───────────────────────────────────────
-      - name: Save latest commit hash
+      # ── 写入最新 hash 文件（供下次对比）────────────────────────────────
+      - name: Write latest commit hash
         if: steps.diff.outputs.changed == 'true' || steps.last.outputs.hash == ''
         run: |
           mkdir -p .github
           echo "${{ steps.upstream.outputs.hash }}" > .github/upstream-last-commit.txt
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/upstream-last-commit.txt
-          git commit -m "chore: update upstream last-known commit hash"
-          git push
+
+      # ── 通过 PR 更新 hash（main 为保护分支，无法直接 push）──────────────
+      - name: Create Pull Request to update hash
+        if: steps.diff.outputs.changed == 'true' || steps.last.outputs.hash == ''
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: update upstream last-known commit hash"
+          branch: chore/upstream-last-commit
+          delete-branch: true
+          title: "chore: update upstream last-known commit hash (${{ steps.upstream.outputs.hash }})"
+          body: |
+            上游 `word-wrangler-gemini-live` 的最新 commit hash 已更新为
+            `${{ steps.upstream.outputs.hash }}`。
+
+            > main 为保护分支，无法直接 push，故通过此 PR 更新
+            > `.github/upstream-last-commit.txt`。合并后下次检查将以此 hash 为基准。
