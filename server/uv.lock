@@ -3223,7 +3223,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pipecat-ai", extras = ["daily", "silero", "google", "runner"], specifier = ">=1.4.0" },
-    { name = "pipecatcloud", specifier = ">=0.7.1" },
+    { name = "pipecatcloud", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]
