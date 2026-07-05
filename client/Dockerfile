@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.24
+# syntax=docker/dockerfile:1.25
 
 # ---------- 1. deps: install only production-dep candidates first for cache ----------
 FROM node:25-slim AS deps
