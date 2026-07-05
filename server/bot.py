@@ -175,10 +175,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ),
     )
 
-    # Set up the initial context for the conversation
+    # Set up the initial context for the conversation.
+    # intro はユーザー発話ではなくアプリ側の指示のため、命令階層で user より上位の
+    # developer role を使う（上流 2b1e375 に追従）。
     messages = [
         {
-            "role": "user",
+            "role": "developer",
             "content": intro_message,
         },
     ]
@@ -188,6 +190,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     context = LLMContext(cast(Any, messages))
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
+        # Gemini Live は speech-to-speech のリアルタイムサービスのため、context 書き込みを
+        # コンテンツストリーム駆動（トランスクリプト / LLMFullResponseStartFrame）にし、
+        # ターン終了戦略がトランスクリプト待ちをしないようにする（上流 2b1e375 に追従）。
+        realtime_service_mode=True,
         user_params=LLMUserAggregatorParams(
             user_mute_strategies=[MuteUntilFirstBotCompleteUserMuteStrategy()],
             vad_analyzer=SileroVADAnalyzer(),
