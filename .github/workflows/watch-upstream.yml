@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout your repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # ── 读取上次记录的 commit hash ──────────────────────────────────────
       - name: Load last known commit hash
@@ -171,7 +171,7 @@ jobs:
       # ── 通过 PR 更新 hash（main 为保护分支，无法直接 push）──────────────
       - name: Create Pull Request to update hash
         if: steps.diff.outputs.changed == 'true' || steps.last.outputs.hash == ''
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore: update upstream last-known commit hash"
           branch: chore/upstream-last-commit
